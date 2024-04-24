@@ -1,0 +1,12 @@
+C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\bin\Debug\net8.0\SmartSupervisorBot.Core.deps.json
+C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\bin\Debug\net8.0\SmartSupervisorBot.Core.dll
+C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\bin\Debug\net8.0\SmartSupervisorBot.Core.pdb
+C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Debug\net8.0\SmartSupervisorBot.Core.csproj.AssemblyReference.cache
+C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Debug\net8.0\SmartSupervisorBot.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Debug\net8.0\SmartSupervisorBot.Core.AssemblyInfoInputs.cache
+C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Debug\net8.0\SmartSupervisorBot.Core.AssemblyInfo.cs
+C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Debug\net8.0\SmartSupervisorBot.Core.csproj.CoreCompileInputs.cache
+C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Debug\net8.0\SmartSupervisorBot.Core.dll
+C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Debug\net8.0\refint\SmartSupervisorBot.Core.dll
+C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Debug\net8.0\SmartSupervisorBot.Core.pdb
+C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Debug\net8.0\ref\SmartSupervisorBot.Core.dll
