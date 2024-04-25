@@ -6,6 +6,7 @@ C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Release
 C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Release\net8.0\SmartSupervisorBot.Core.AssemblyInfoInputs.cache
 C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Release\net8.0\SmartSupervisorBot.Core.AssemblyInfo.cs
 C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Release\net8.0\SmartSupervisorBot.Core.csproj.CoreCompileInputs.cache
+C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Release\net8.0\SmartSupervisorBot.Core.sourcelink.json
 C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Release\net8.0\SmartSupervisorBot.Core.dll
 C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Release\net8.0\refint\SmartSupervisorBot.Core.dll
 C:\Workspace\MainProjects\SmartSupervisorBot\SmartSupervisorBot.Core\obj\Release\net8.0\SmartSupervisorBot.Core.pdb

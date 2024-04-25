@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SmartSupervisorBot.ConsoleApp")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b2e5a840cf85e3c220f71146112b8c9a267477b4")]
 [assembly: System.Reflection.AssemblyProductAttribute("SmartSupervisorBot.ConsoleApp")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SmartSupervisorBot.ConsoleApp")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -50,35 +50,62 @@ namespace SmartSupervisorBot.Core
             {
                 if (update.Type == UpdateType.Message && update?.Message?.Type == MessageType.Text)
                 {
-                    var messageText = update.Message.Text;
+                    var messageText = update.Message?.Text?.Trim();
                     if (messageText?.Split(' ').Length < 4)
                     {
                         return;
                     }
-                    var chatId = update.Message.Chat.Id;
+                    var chatId = update.Message?.Chat.Id ?? 0;
                     var messageId = update.Message.MessageId;
-                    var location = update.Message.Location;
+                    if (chatId == 0)
+                    {
+                        return;
+                    }
+                    var groupUserName = update.Message.Chat.Username;
+
+                    if (groupUserName != "ForumFuerAlle" && (update.Message.Chat.Title != "TestMyRobot"))
+                    {
+                        Console.WriteLine($"Received a message in chat {chatId} __ {update.Message.Chat.Title}: {messageText}");
+                        var correctedText = $"<i> Dieser Roboter ist nur für bestimmte Gruppen aktiv. Bitte wenden Sie sich an den Bot-Hersteller: @Roohi_C </i>";
+
+                        await botClient.SendTextMessageAsync(
+                            chatId: chatId,
+                            text: correctedText,
+                            replyToMessageId: messageId,
+                            parseMode: ParseMode.Html,
+                            cancellationToken: cancellationToken);
+
+                        return;
+                    }
+                    //  && (update.Message.MessageThreadId != null && update.Message?.ReplyToMessage?.MessageThreadId != null)
+                    if (groupUserName == "ForumFuerAlle" && 
+                        (update.Message.MessageThreadId != null && 
+                         update.Message?.ReplyToMessage?.MessageThreadId != null))
+                    {
+                        return;
+                    }
                     var phoneNumber = update?.Message?.Contact?.PhoneNumber;
                     var userName = update?.Message.From?.Username ?? $"{update?.Message.From?.FirstName} {update?.Message.From?.LastName}";
 
                     var language = await DetectLanguageAsync(messageText);
                     var promptText = language.StartsWith("Deutsch") ?
-                                $"Bitte korrigieren und verbessern Sie den folgenden Text, wenn Fehler vorhanden sind, und geben Sie 'NO CHANGES' an, wenn der Text bereits korrekt ist: '{messageText}'" :
+                                $"Bitte prüfen Sie den folgenden Text gründlich auf grammatikalische Genauigkeit und korrigieren Sie Fehler, falls vorhanden: '{messageText}'"
+                                :
                                 $"Bitte übersetzen Sie den folgenden Text ins Deutsche und korrigieren Sie ihn, wenn nötig: '{messageText}'.";
 
                     var chatGptResponse = await _api.Completions.CreateCompletionAsync(new OpenAI_API.Completions.CompletionRequest
                     {
                         Model = "gpt-3.5-turbo-instruct",
                         Prompt = promptText,
-                        MaxTokens = 150,
-                        Temperature = 0.5
+                        MaxTokens = 100,
+                        Temperature = 0.7
                     });
 
                     Console.WriteLine($"Received a message in chat {chatId}: {messageText}");
-                    string response = chatGptResponse.ToString();
-                    if (!response.Contains("NO CHANGES"))
+                    string response = chatGptResponse.ToString().Replace("\"","").Trim();
+                    if (response != messageText)
                     {
-                        var correctedText = $"<i> {userName} sagte</i>: <blockquote><i> {chatGptResponse.ToString()} </i></blockquote>";
+                        var correctedText = $"<i> {userName} sagte</i>: <blockquote><i> {response} </i></blockquote>";
 
                         await botClient.SendTextMessageAsync(
                             chatId: chatId,
