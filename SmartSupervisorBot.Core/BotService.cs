@@ -77,7 +77,7 @@ namespace SmartSupervisorBot.Core
 
                         return;
                     }
-                    //  && (update.Message.MessageThreadId != null && update.Message?.ReplyToMessage?.MessageThreadId != null)
+                    
                     if (groupUserName == "ForumFuerAlle" && 
                         (update.Message.MessageThreadId != null && 
                          update.Message?.ReplyToMessage?.MessageThreadId != null))
