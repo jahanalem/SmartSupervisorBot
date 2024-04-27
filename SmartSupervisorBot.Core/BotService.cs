@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using OpenAI_API;
 using SmartSupervisorBot.Core.Settings;
 using System.Text;
+using System.Threading;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -58,6 +59,7 @@ namespace SmartSupervisorBot.Core
                     {
                         return;
                     }
+
                     var chatId = update.Message?.Chat.Id ?? 0;
                     var messageId = update.Message?.MessageId ?? 0;
                     if (chatId == 0)
@@ -66,17 +68,9 @@ namespace SmartSupervisorBot.Core
                     }
                     var groupUserName = update.Message.Chat.Username;
 
-                    if (groupUserName != "ForumFuerAlle" && (update.Message.Chat.Title != "TestMyRobot"))
+                    if (!IsValidGroup(update.Message))
                     {
-                        Console.WriteLine($"Received a message in chat {chatId} __ {update.Message.Chat.Title}: {messageText}");
-                        var correctedText = $"<i> Dieser Roboter ist nur für bestimmte Gruppen aktiv. Bitte wenden Sie sich an den Bot-Hersteller: @Roohi_C </i>";
-
-                        await botClient.SendTextMessageAsync(
-                            chatId: chatId,
-                            text: correctedText,
-                            replyToMessageId: messageId,
-                            parseMode: ParseMode.Html,
-                            cancellationToken: cancellationToken);
+                        await InformInvalidGroupAsync(botClient, update, cancellationToken);
 
                         return;
                     }
@@ -87,35 +81,28 @@ namespace SmartSupervisorBot.Core
                     {
                         return;
                     }
-                    var phoneNumber = update?.Message?.Contact?.PhoneNumber;
-                    var userName = update?.Message?.From?.Username ?? $"{update?.Message?.From?.FirstName} {update?.Message.From?.LastName}";
 
                     var language = await DetectLanguageAsync(messageText);
-                    var promptText = language.StartsWith("Deutsch") ?
-                                $"Bitte prüfen Sie den folgenden Text gründlich auf grammatikalische Genauigkeit und korrigieren Sie Fehler, falls vorhanden: '{messageText}'"
-                                :
-                                $"Bitte übersetzen Sie den folgenden Text ins Deutsche und korrigieren Sie ihn, wenn nötig: '{messageText}'.";
-
-                    var chatGptResponse = await _api.Completions.CreateCompletionAsync(new OpenAI_API.Completions.CompletionRequest
+                    if (!IsValidLanguageResponse(language))
                     {
-                        Prompt = promptText,
-                        Model = _botConfigurationOptions.TextCorrectionSettings.Model,
-                        MaxTokens = _botConfigurationOptions.TextCorrectionSettings.MaxTokens,
-                        Temperature = _botConfigurationOptions.TextCorrectionSettings.Temperature
-                    });
+                        return;
+                    }
+                    var promptText = GetPromptText(language, messageText);
+
+                    var chatGptResponse = await _api.Completions.CreateCompletionAsync(
+                        new OpenAI_API.Completions.CompletionRequest
+                        {
+                            Prompt = promptText,
+                            Model = _botConfigurationOptions.TextCorrectionSettings.Model,
+                            MaxTokens = _botConfigurationOptions.TextCorrectionSettings.MaxTokens,
+                            Temperature = _botConfigurationOptions.TextCorrectionSettings.Temperature
+                        });
 
                     Console.WriteLine($"Received a message in chat {chatId}: {messageText}");
                     string response = chatGptResponse.ToString().Replace("\"", "").Trim();
                     if (response != messageText)
                     {
-                        var correctedText = $"<i> {userName} sagte</i>: <blockquote><i> {response} </i></blockquote>";
-
-                        await botClient.SendTextMessageAsync(
-                            chatId: chatId,
-                            text: correctedText,
-                            replyToMessageId: messageId,
-                            parseMode: ParseMode.Html,
-                            cancellationToken: cancellationToken);
+                        await SendCorrectedTextAsync(botClient, update.Message, response, cancellationToken);
                     }
                     else
                     {
@@ -127,6 +114,38 @@ namespace SmartSupervisorBot.Core
             {
                 await HandleErrorAsync(botClient, ex, cancellationToken);
             }
+        }
+
+        private bool IsValidLanguageResponse(string language)
+        {
+            var words = language.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            var isValidLanguage = words.Length < 3;
+            if (!isValidLanguage)
+            {
+                Console.WriteLine($"Invalid language detected.");
+                return false;
+            }
+            return true;
+        }
+
+        private bool IsValidGroup(Message message)
+        {
+            return message.Chat.Username == "ForumFuerAlle" || (message.Chat.Title == "TestMyRobot");
+        }
+
+        private async Task InformInvalidGroupAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
+        {
+            var chatId = update.Message?.Chat.Id ?? 0;
+            var messageId = update.Message?.MessageId ?? 0;
+            Console.WriteLine($"Received a message in chat {chatId} __ {update.Message.Chat.Title}: {update.Message.Text.Trim()}");
+            var correctedText = $"<i> Dieser Roboter ist nur für bestimmte Gruppen aktiv. Bitte wenden Sie sich an den Bot-Hersteller: @Roohi_C </i>";
+
+            await botClient.SendTextMessageAsync(
+                chatId: chatId,
+                text: correctedText,
+                replyToMessageId: messageId,
+                parseMode: ParseMode.Html,
+                cancellationToken: cancellationToken);
         }
 
         private async Task SendReactionAsync(long chatId, long messageId, string emoji)
@@ -150,6 +169,29 @@ namespace SmartSupervisorBot.Core
             {
                 Console.WriteLine($"Failed to send reaction: {response.StatusCode}");
             }
+        }
+
+        private string GetPromptText(string language, string messageText)
+        {
+            return language.StartsWith("Deutsch") ?
+                                $"{_botConfigurationOptions.TextCorrectionSettings.Prompt} '{messageText}'"
+                                :
+                                $"{_botConfigurationOptions.LanguageDetectionSettings.Prompt} '{messageText}'.";
+        }
+
+        private async Task SendCorrectedTextAsync(ITelegramBotClient botClient, Message message, string response, CancellationToken cancellationToken)
+        {
+            var chatId = message?.Chat.Id ?? 0;
+            var messageId = message?.MessageId ?? 0;
+            var writer = !string.IsNullOrEmpty(message?.From?.Username) ? $"@{message.From.Username}" : $"{message?.From?.FirstName} {message.From?.LastName}";
+            var correctedText = $"<i> {writer} sagte</i>: <blockquote><i> {response} </i></blockquote>";
+
+            await botClient.SendTextMessageAsync(
+                chatId: chatId,
+                text: correctedText,
+                replyToMessageId: messageId,
+                parseMode: ParseMode.Html,
+                cancellationToken: cancellationToken);
         }
 
         private Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
