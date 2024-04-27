@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using SmartSupervisorBot.Core;
+using SmartSupervisorBot.Core.Settings;
 
 namespace SmartSupervisorBot.ConsoleApp
 {
@@ -31,11 +33,12 @@ namespace SmartSupervisorBot.ConsoleApp
 
         static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {
+            services.Configure<BotConfigurationOptions>(configuration.GetSection("BotConfiguration"));
+            services.AddSingleton<IConfiguration>(configuration);
             services.AddHttpClient();
-            services.AddSingleton<BotService>(sp =>
-                new BotService(sp.GetRequiredService<IHttpClientFactory>(),
-                configuration["BotSettings:BotToken"],
-                configuration["BotSettings:OpenAiToken"]));
+            services.AddSingleton<BotService>(sp => new BotService(
+                sp.GetRequiredService<IOptions<BotConfigurationOptions>>(),
+                sp.GetRequiredService<IHttpClientFactory>()));
         }
     }
 }

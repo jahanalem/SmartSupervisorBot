@@ -1,24 +1,7 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "C:\\Workspace\\MainProjects\\SmartSupervisorBot\\",
-  "Documents": [
-    {
-      "AbsoluteMoniker": "D:0:0:{2C9F4108-BDF3-40EF-A6E3-BFE9CA7AB4A2}|SmartSupervisorBot.Core\\SmartSupervisorBot.Core.csproj|c:\\workspace\\mainprojects\\smartsupervisorbot\\smartsupervisorbot.core\\botservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{2C9F4108-BDF3-40EF-A6E3-BFE9CA7AB4A2}|SmartSupervisorBot.Core\\SmartSupervisorBot.Core.csproj|solutionrelative:smartsupervisorbot.core\\botservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{51C77169-57D6-4B50-B630-7AACE9DE0946}|SmartSupervisorBot.ConsoleApp\\SmartSupervisorBot.ConsoleApp.csproj|c:\\workspace\\mainprojects\\smartsupervisorbot\\smartsupervisorbot.consoleapp\\appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{51C77169-57D6-4B50-B630-7AACE9DE0946}|SmartSupervisorBot.ConsoleApp\\SmartSupervisorBot.ConsoleApp.csproj|solutionrelative:smartsupervisorbot.consoleapp\\appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{51C77169-57D6-4B50-B630-7AACE9DE0946}|SmartSupervisorBot.ConsoleApp\\SmartSupervisorBot.ConsoleApp.csproj|c:\\workspace\\mainprojects\\smartsupervisorbot\\smartsupervisorbot.consoleapp\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{51C77169-57D6-4B50-B630-7AACE9DE0946}|SmartSupervisorBot.ConsoleApp\\SmartSupervisorBot.ConsoleApp.csproj|solutionrelative:smartsupervisorbot.consoleapp\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{51C77169-57D6-4B50-B630-7AACE9DE0946}|SmartSupervisorBot.ConsoleApp\\SmartSupervisorBot.ConsoleApp.csproj|c:\\workspace\\mainprojects\\smartsupervisorbot\\smartsupervisorbot.consoleapp\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{51C77169-57D6-4B50-B630-7AACE9DE0946}|SmartSupervisorBot.ConsoleApp\\SmartSupervisorBot.ConsoleApp.csproj|solutionrelative:smartsupervisorbot.consoleapp\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    }
-  ],
+  "Documents": [],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
@@ -26,35 +9,8 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": -1,
           "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "BotService.cs",
-              "DocumentMoniker": "C:\\Workspace\\MainProjects\\SmartSupervisorBot\\SmartSupervisorBot.Core\\BotService.cs",
-              "RelativeDocumentMoniker": "SmartSupervisorBot.Core\\BotService.cs",
-              "ToolTip": "C:\\Workspace\\MainProjects\\SmartSupervisorBot\\SmartSupervisorBot.Core\\BotService.cs",
-              "RelativeToolTip": "SmartSupervisorBot.Core\\BotService.cs",
-              "ViewState": "AQIAAGEAAAAAAAAAAAAAAGgAAABRAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-04-23T10:04:05.884Z",
-              "IsPinned": true,
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Workspace\\MainProjects\\SmartSupervisorBot\\SmartSupervisorBot.ConsoleApp\\Program.cs",
-              "RelativeDocumentMoniker": "SmartSupervisorBot.ConsoleApp\\Program.cs",
-              "ToolTip": "C:\\Workspace\\MainProjects\\SmartSupervisorBot\\SmartSupervisorBot.ConsoleApp\\Program.cs",
-              "RelativeToolTip": "SmartSupervisorBot.ConsoleApp\\Program.cs",
-              "ViewState": "AQIAABAAAAAAAAAAAAAkwB8AAAAgAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-04-23T09:38:31.029Z",
-              "IsPinned": true
-            },
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
@@ -66,30 +22,6 @@
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "appsettings.json",
-              "DocumentMoniker": "C:\\Workspace\\MainProjects\\SmartSupervisorBot\\SmartSupervisorBot.ConsoleApp\\appsettings.json",
-              "RelativeDocumentMoniker": "SmartSupervisorBot.ConsoleApp\\appsettings.json",
-              "ToolTip": "C:\\Workspace\\MainProjects\\SmartSupervisorBot\\SmartSupervisorBot.ConsoleApp\\appsettings.json",
-              "RelativeToolTip": "SmartSupervisorBot.ConsoleApp\\appsettings.json",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2024-04-24T14:43:56.847Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "appsettings.Development.json",
-              "DocumentMoniker": "C:\\Workspace\\MainProjects\\SmartSupervisorBot\\SmartSupervisorBot.ConsoleApp\\appsettings.Development.json",
-              "RelativeDocumentMoniker": "SmartSupervisorBot.ConsoleApp\\appsettings.Development.json",
-              "ToolTip": "C:\\Workspace\\MainProjects\\SmartSupervisorBot\\SmartSupervisorBot.ConsoleApp\\appsettings.Development.json",
-              "RelativeToolTip": "SmartSupervisorBot.ConsoleApp\\appsettings.Development.json",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAA0AAAAWAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2024-04-24T00:04:52.138Z"
             }
           ]
         }

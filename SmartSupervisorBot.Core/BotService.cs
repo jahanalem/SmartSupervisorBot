@@ -1,6 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using OpenAI_API;
+using SmartSupervisorBot.Core.Settings;
 using System.Text;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
@@ -13,18 +16,18 @@ namespace SmartSupervisorBot.Core
     {
         private readonly ILogger<BotService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
-
         private readonly string _botToken;
         private readonly OpenAIAPI _api;
-
         private readonly CancellationTokenSource _cts;
         private TelegramBotClient _botClient;
+        private readonly BotConfigurationOptions _botConfigurationOptions;
 
-        public BotService(IHttpClientFactory httpClientFactory, string botToken, string openAiToken)
+        public BotService(IOptions<BotConfigurationOptions> botConfigurationOptions, IHttpClientFactory httpClientFactory)
         {
+            _botConfigurationOptions = botConfigurationOptions.Value;
             _httpClientFactory = httpClientFactory;
-            _botToken = botToken;
-            _api = new OpenAIAPI(openAiToken);
+            _botToken = _botConfigurationOptions.BotSettings.BotToken;
+            _api = new OpenAIAPI(_botConfigurationOptions.BotSettings.OpenAiToken);
             _cts = new CancellationTokenSource();
             _botClient = new TelegramBotClient(_botToken, _httpClientFactory.CreateClient());
         }
@@ -56,7 +59,7 @@ namespace SmartSupervisorBot.Core
                         return;
                     }
                     var chatId = update.Message?.Chat.Id ?? 0;
-                    var messageId = update.Message.MessageId;
+                    var messageId = update.Message?.MessageId ?? 0;
                     if (chatId == 0)
                     {
                         return;
@@ -77,15 +80,15 @@ namespace SmartSupervisorBot.Core
 
                         return;
                     }
-                    
-                    if (groupUserName == "ForumFuerAlle" && 
-                        (update.Message.MessageThreadId != null && 
+
+                    if (groupUserName == "ForumFuerAlle" &&
+                        (update.Message.MessageThreadId != null &&
                          update.Message?.ReplyToMessage?.MessageThreadId != null))
                     {
                         return;
                     }
                     var phoneNumber = update?.Message?.Contact?.PhoneNumber;
-                    var userName = update?.Message.From?.Username ?? $"{update?.Message.From?.FirstName} {update?.Message.From?.LastName}";
+                    var userName = update?.Message?.From?.Username ?? $"{update?.Message?.From?.FirstName} {update?.Message.From?.LastName}";
 
                     var language = await DetectLanguageAsync(messageText);
                     var promptText = language.StartsWith("Deutsch") ?
@@ -95,14 +98,14 @@ namespace SmartSupervisorBot.Core
 
                     var chatGptResponse = await _api.Completions.CreateCompletionAsync(new OpenAI_API.Completions.CompletionRequest
                     {
-                        Model = "gpt-3.5-turbo-instruct",
                         Prompt = promptText,
-                        MaxTokens = 100,
-                        Temperature = 0.7
+                        Model = _botConfigurationOptions.TextCorrectionSettings.Model,
+                        MaxTokens = _botConfigurationOptions.TextCorrectionSettings.MaxTokens,
+                        Temperature = _botConfigurationOptions.TextCorrectionSettings.Temperature
                     });
 
                     Console.WriteLine($"Received a message in chat {chatId}: {messageText}");
-                    string response = chatGptResponse.ToString().Replace("\"","").Trim();
+                    string response = chatGptResponse.ToString().Replace("\"", "").Trim();
                     if (response != messageText)
                     {
                         var correctedText = $"<i> {userName} sagte</i>: <blockquote><i> {response} </i></blockquote>";
@@ -168,10 +171,10 @@ namespace SmartSupervisorBot.Core
         {
             var response = await _api.Completions.CreateCompletionAsync(new OpenAI_API.Completions.CompletionRequest
             {
-                Model = "gpt-3.5-turbo-instruct",
                 Prompt = $"Identifizieren Sie die Sprache dieses Textes: '{text}'",
-                MaxTokens = 10,
-                Temperature = 0.1
+                Model = _botConfigurationOptions.LanguageDetectionSettings.Model,
+                MaxTokens = _botConfigurationOptions.LanguageDetectionSettings.MaxTokens,
+                Temperature = _botConfigurationOptions.LanguageDetectionSettings.Temperature
             });
 
             return response.ToString().Trim();
