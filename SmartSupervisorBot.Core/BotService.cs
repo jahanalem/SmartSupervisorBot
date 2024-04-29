@@ -1,11 +1,10 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using OpenAI_API;
 using SmartSupervisorBot.Core.Settings;
+using SmartSupervisorBot.DataAccess;
 using System.Text;
-using System.Threading;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -13,7 +12,7 @@ using Telegram.Bot.Types.Enums;
 
 namespace SmartSupervisorBot.Core
 {
-    public class BotService : IDisposable
+    public class BotService : IBotService, IDisposable
     {
         private readonly ILogger<BotService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
@@ -23,7 +22,11 @@ namespace SmartSupervisorBot.Core
         private TelegramBotClient _botClient;
         private readonly BotConfigurationOptions _botConfigurationOptions;
 
-        public BotService(IOptions<BotConfigurationOptions> botConfigurationOptions, IHttpClientFactory httpClientFactory)
+        private readonly IGroupAccess _groupAccess;
+
+        public BotService(IOptions<BotConfigurationOptions> botConfigurationOptions,
+            IHttpClientFactory httpClientFactory,
+            IGroupAccess groupAccess, ILogger<BotService> logger)
         {
             _botConfigurationOptions = botConfigurationOptions.Value;
             _httpClientFactory = httpClientFactory;
@@ -31,21 +34,64 @@ namespace SmartSupervisorBot.Core
             _api = new OpenAIAPI(_botConfigurationOptions.BotSettings.OpenAiToken);
             _cts = new CancellationTokenSource();
             _botClient = new TelegramBotClient(_botToken, _httpClientFactory.CreateClient());
+            _logger = logger;
+            _groupAccess = groupAccess;
+        }
+
+
+        public static UpdateType[] ConvertStringToUpdateType(string[] updateStrings)
+        {
+            return updateStrings.Select(update => Enum.Parse<UpdateType>(update, ignoreCase: true)).ToArray();
         }
 
         public void StartReceivingMessages()
         {
+            string[] updateStrings = _botConfigurationOptions.AllowedUpdatesSettings?.AllowedUpdates ?? Array.Empty<string>();
+            UpdateType[] updates = ConvertStringToUpdateType(updateStrings);
+
             var receiverOptions = new ReceiverOptions
             {
-                AllowedUpdates = Array.Empty<UpdateType>()
+                AllowedUpdates = updates
             };
+
+            _logger.LogInformation("Starting message reception...");
 
             _botClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, receiverOptions, _cts.Token);
 
-            Console.WriteLine("Press any key to stop the bot...");
-            Console.ReadKey();
+            _logger.LogInformation("Message reception started successfully.");
+        }
 
-            _cts.Cancel();
+        public async Task AddGroup(string groupName)
+        {
+            await _groupAccess.AddGroupAsync(groupName);
+        }
+
+        public async Task<bool> DeleteGroup(string groupName)
+        {
+            return await _groupAccess.RemoveGroupAsync(groupName);
+        }
+
+        public async Task EditGroup(string oldGroupName, string newGroupName)
+        {
+            bool deleteSuccess = await _groupAccess.RemoveGroupAsync(oldGroupName);
+            if (!deleteSuccess)
+            {
+                Console.WriteLine("Failed to delete the old group.");
+                return;
+            }
+
+            await _groupAccess.AddGroupAsync(newGroupName);
+        }
+
+        public async Task<List<string>> ListGroups()
+        {
+            return await _groupAccess.ListAllGroupsAsync();
+        }
+
+        public void Dispose()
+        {
+            _cts?.Dispose();
+            _httpClientFactory?.CreateClient().Dispose();
         }
 
         private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
@@ -68,14 +114,14 @@ namespace SmartSupervisorBot.Core
                     }
                     var groupUserName = update.Message.Chat.Username;
 
-                    if (!IsValidGroup(update.Message))
+                    if (!(await IsValidGroup(update.Message)))
                     {
                         await InformInvalidGroupAsync(botClient, update, cancellationToken);
 
                         return;
                     }
 
-                    if (groupUserName == "ForumFuerAlle" &&
+                    if (await IsValidGroup(update.Message) &&
                         (update.Message.MessageThreadId != null &&
                          update.Message?.ReplyToMessage?.MessageThreadId != null))
                     {
@@ -98,7 +144,8 @@ namespace SmartSupervisorBot.Core
                             Temperature = _botConfigurationOptions.TextCorrectionSettings.Temperature
                         });
 
-                    Console.WriteLine($"Received a message in chat {chatId}: {messageText}");
+                    _logger.LogInformation($"Received a message in chat {chatId}: {messageText}");
+
                     string response = chatGptResponse.ToString().Replace("\"", "").Trim();
                     if (response != messageText)
                     {
@@ -122,22 +169,23 @@ namespace SmartSupervisorBot.Core
             var isValidLanguage = words.Length < 3;
             if (!isValidLanguage)
             {
-                Console.WriteLine($"Invalid language detected.");
+                _logger.LogError("Invalid language detected.");
                 return false;
             }
             return true;
         }
 
-        private bool IsValidGroup(Message message)
+        private async Task<bool> IsValidGroup(Message message)
         {
-            return message.Chat.Username == "ForumFuerAlle" || (message.Chat.Title == "TestMyRobot");
+            var groupName = message.Chat.Username ?? message.Chat.Title;
+            return await _groupAccess.GroupExistsAsync(groupName);
         }
 
         private async Task InformInvalidGroupAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             var chatId = update.Message?.Chat.Id ?? 0;
             var messageId = update.Message?.MessageId ?? 0;
-            Console.WriteLine($"Received a message in chat {chatId} __ {update.Message.Chat.Title}: {update.Message.Text.Trim()}");
+
             var correctedText = $"<i> Dieser Roboter ist nur für bestimmte Gruppen aktiv. Bitte wenden Sie sich an den Bot-Hersteller: @Roohi_C </i>";
 
             await botClient.SendTextMessageAsync(
@@ -167,7 +215,7 @@ namespace SmartSupervisorBot.Core
 
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"Failed to send reaction: {response.StatusCode}");
+                _logger.LogError($"Failed to send reaction: {response.StatusCode}");
             }
         }
 
@@ -196,15 +244,15 @@ namespace SmartSupervisorBot.Core
 
         private Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
-            Console.WriteLine($"An error occurred: {exception.Message}");
+            _logger.LogTrace($"An error occurred: {exception.Message}");
 
             if (exception.Message.Contains("message to reply not found"))
             {
-                Console.WriteLine("Die Nachricht, auf die geantwortet werden sollte, wurde nicht gefunden. Keine Aktion wird durchgeführt.");
+                _logger.LogError("Die Nachricht, auf die geantwortet werden sollte, wurde nicht gefunden. Keine Aktion wird durchgeführt.");
                 return Task.CompletedTask;
             }
 
-            Console.WriteLine("Ein anderer Fehler ist aufgetreten. Bitte überprüfen Sie die Details.");
+            _logger.LogError("Ein anderer Fehler ist aufgetreten. Bitte überprüfen Sie die Details.");
 
             return Task.CompletedTask;
         }
@@ -220,12 +268,6 @@ namespace SmartSupervisorBot.Core
             });
 
             return response.ToString().Trim();
-        }
-
-        public void Dispose()
-        {
-            _cts?.Dispose();
-            _httpClientFactory?.CreateClient().Dispose();
         }
     }
 }

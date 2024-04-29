@@ -11,4 +11,8 @@
     <PackageReference Include="Telegram.Bot" Version="19.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SmartSupervisorBot.DataAccess\SmartSupervisorBot.DataAccess.csproj" />
+  </ItemGroup>
+
 </Project>
