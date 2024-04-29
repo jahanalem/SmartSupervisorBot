@@ -6,5 +6,6 @@
         public LanguageDetectionSettings LanguageDetectionSettings { get; set; }
         public BotSettings BotSettings { get; set; }
         public AllowedUpdatesSettings AllowedUpdatesSettings { get; set; }
+        public TextTranslateSettings TextTranslateSettings { get; set; }
     }
 }

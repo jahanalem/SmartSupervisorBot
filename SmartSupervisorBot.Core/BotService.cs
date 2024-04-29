@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using OpenAI_API;
+using OpenAI_API.Completions;
 using SmartSupervisorBot.Core.Settings;
 using SmartSupervisorBot.DataAccess;
 using System.Text;
@@ -133,16 +134,9 @@ namespace SmartSupervisorBot.Core
                     {
                         return;
                     }
-                    var promptText = GetPromptText(language, messageText);
+                    var completionRequest = GetCompletionRequest(language, messageText);
 
-                    var chatGptResponse = await _api.Completions.CreateCompletionAsync(
-                        new OpenAI_API.Completions.CompletionRequest
-                        {
-                            Prompt = promptText,
-                            Model = _botConfigurationOptions.TextCorrectionSettings.Model,
-                            MaxTokens = _botConfigurationOptions.TextCorrectionSettings.MaxTokens,
-                            Temperature = _botConfigurationOptions.TextCorrectionSettings.Temperature
-                        });
+                    var chatGptResponse = await _api.Completions.CreateCompletionAsync(completionRequest);
 
                     _logger.LogInformation($"Received a message in chat {chatId}: {messageText}");
 
@@ -219,12 +213,20 @@ namespace SmartSupervisorBot.Core
             }
         }
 
-        private string GetPromptText(string language, string messageText)
+        private CompletionRequest GetCompletionRequest(string language, string messageText)
         {
-            return language.StartsWith("Deutsch") ?
-                                $"{_botConfigurationOptions.TextCorrectionSettings.Prompt} '{messageText}'"
-                                :
-                                $"{_botConfigurationOptions.LanguageDetectionSettings.Prompt} '{messageText}'.";
+            IBaseOpenAiTextSettings settings = language.StartsWith("Deutsch")
+                            ? _botConfigurationOptions.TextCorrectionSettings
+                            : _botConfigurationOptions.TextTranslateSettings;
+
+            
+            return new OpenAI_API.Completions.CompletionRequest
+            {
+                Prompt = $"{settings.Prompt} '{messageText}'",
+                Model = settings.Model,
+                MaxTokens = settings.MaxTokens,
+                Temperature = settings.Temperature
+            };
         }
 
         private async Task SendCorrectedTextAsync(ITelegramBotClient botClient, Message message, string response, CancellationToken cancellationToken)
@@ -261,7 +263,7 @@ namespace SmartSupervisorBot.Core
         {
             var response = await _api.Completions.CreateCompletionAsync(new OpenAI_API.Completions.CompletionRequest
             {
-                Prompt = $"Identifizieren Sie die Sprache dieses Textes: '{text}'",
+                Prompt = $"{_botConfigurationOptions.LanguageDetectionSettings.Prompt} '{text}'",
                 Model = _botConfigurationOptions.LanguageDetectionSettings.Model,
                 MaxTokens = _botConfigurationOptions.LanguageDetectionSettings.MaxTokens,
                 Temperature = _botConfigurationOptions.LanguageDetectionSettings.Temperature
