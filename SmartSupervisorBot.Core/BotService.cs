@@ -104,6 +104,7 @@ namespace SmartSupervisorBot.Core
                     var messageText = update.Message?.Text?.Trim();
                     if (messageText?.Split(' ').Length < 4)
                     {
+                        _logger.LogInformation("Your sentence has less than four words, that's why the bot doesn't react to it.");
                         return;
                     }
 
@@ -215,18 +216,31 @@ namespace SmartSupervisorBot.Core
 
         private CompletionRequest GetCompletionRequest(string language, string messageText)
         {
-            IBaseOpenAiTextSettings settings = language.StartsWith("Deutsch")
-                            ? _botConfigurationOptions.TextCorrectionSettings
-                            : _botConfigurationOptions.TextTranslateSettings;
+            IBaseOpenAiTextSettings settings;
+            string prompt;
 
-            
+            if (language.StartsWith(_botConfigurationOptions.TranslateTheTextTo))
+            {
+                settings = _botConfigurationOptions.TextCorrectionSettings;
+                prompt = settings.Prompt;
+            }
+            else
+            {
+                settings = _botConfigurationOptions.TextTranslateSettings;
+                prompt = FormatPrompt(_botConfigurationOptions.TranslateTheTextTo, settings.Prompt);
+            }
+
             return new OpenAI_API.Completions.CompletionRequest
             {
-                Prompt = $"{settings.Prompt} '{messageText}'",
+                Prompt = $"{prompt} '{messageText}'",
                 Model = settings.Model,
                 MaxTokens = settings.MaxTokens,
                 Temperature = settings.Temperature
             };
+        }
+        private string FormatPrompt(string language, string currentPrompt)
+        {
+            return currentPrompt.Replace("{language}", language);
         }
 
         private async Task SendCorrectedTextAsync(ITelegramBotClient botClient, Message message, string response, CancellationToken cancellationToken)
@@ -254,7 +268,7 @@ namespace SmartSupervisorBot.Core
                 return Task.CompletedTask;
             }
 
-            _logger.LogError("Ein anderer Fehler ist aufgetreten. Bitte überprüfen Sie die Details.");
+            _logger.LogError($"Ein anderer Fehler ist aufgetreten. Bitte überprüfen Sie die Details.{exception.StackTrace}");
 
             return Task.CompletedTask;
         }
