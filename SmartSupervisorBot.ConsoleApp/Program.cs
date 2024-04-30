@@ -68,7 +68,7 @@ namespace SmartSupervisorBot.ConsoleApp
             while (true)
             {
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("Enter command (add, delete, edit, list, exit):");
+                Console.WriteLine("Enter command (add, delete, edit, setlang, list, exit):");
                 Console.ForegroundColor = ConsoleColor.White;
                 var command = Console.ReadLine();
                 switch (command.ToLower())
@@ -81,6 +81,9 @@ namespace SmartSupervisorBot.ConsoleApp
                         break;
                     case "edit":
                         await ExecuteEditGroup(botService);
+                        break;
+                    case "setlang":
+                        await ExecuteSetLanguage(botService);
                         break;
                     case "list":
                         await ExecuteListGroups(botService);
@@ -103,7 +106,12 @@ namespace SmartSupervisorBot.ConsoleApp
         {
             Console.WriteLine("Enter a group name to add:");
             var groupName = Console.ReadLine();
-            await botService.AddGroup(groupName.Trim());
+
+            Console.WriteLine("Enter a language to add:");
+            var language = Console.ReadLine();
+
+            await botService.AddGroup(groupName, language.Trim());
+
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("Group added successfully.");
             Console.ResetColor();
@@ -131,13 +139,63 @@ namespace SmartSupervisorBot.ConsoleApp
 
         static async Task ExecuteEditGroup(BotService botService)
         {
-            Console.WriteLine("Enter the old group name:");
-            var oldName = Console.ReadLine();
+            Console.WriteLine("Enter the current group name:");
+            var currentName = Console.ReadLine();
             Console.WriteLine("Enter the new group name:");
             var newName = Console.ReadLine();
-            await botService.EditGroup(oldName, newName);
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("Group edited successfully.");
+
+            var renamed = await botService.EditGroup(currentName.Trim(), newName.Trim());
+            if (renamed)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("Group renamed successfully.");
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Failed to rename group or group not found.");
+            }
+            Console.ResetColor();
+        }
+
+        static async Task ExecuteSetLanguage(BotService botService)
+        {
+            Console.WriteLine("Enter the group name:");
+            var groupName = Console.ReadLine();
+            Console.WriteLine("Enter the new language for the group (English, Deutsch, Persisch, Spanisch, Französisch, Arabisch):");
+            var languageInput = Console.ReadLine().Trim();
+
+            var supportedLanguagesa = new List<string> { "English", "Deutsch", "Persisch", "Spanisch", "Französisch", "Arabisch" };
+
+            var supportedLanguages = new Dictionary<string, string>
+            {
+                {"english", "English"},
+                {"deutsch", "Deutsch"},
+                {"persisch", "Persisch"},
+                {"spanisch", "Spanisch"},
+                {"französisch", "Französisch"}
+            };
+
+            // Check if the entered language is supported
+            if (!supportedLanguages.TryGetValue(languageInput.ToLower(), out var normalizedLanguage))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Invalid language entered. Please enter a valid language from the supported list.");
+                Console.ResetColor();
+                return;
+            }
+
+            var languageSet = await botService.EditLanguage(groupName.Trim(), normalizedLanguage);
+            if (languageSet)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("Language updated successfully for the group.");
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Failed to update language or group not found.");
+            }
             Console.ResetColor();
         }
 
@@ -145,8 +203,11 @@ namespace SmartSupervisorBot.ConsoleApp
         {
             var groups = await botService.ListGroups();
             Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.WriteLine("List of groups:");
-            groups.ForEach(group => Console.WriteLine(group));
+            Console.WriteLine("List of groups with their languages:");
+            foreach (var group in groups)
+            {
+                Console.WriteLine($"Group: {group.GroupName}, Language: {group.Language}");
+            }
             Console.ResetColor();
         }
     }

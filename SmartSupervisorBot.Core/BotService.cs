@@ -62,9 +62,9 @@ namespace SmartSupervisorBot.Core
             _logger.LogInformation("Message reception started successfully.");
         }
 
-        public async Task AddGroup(string groupName)
+        public async Task AddGroup(string groupName, string language)
         {
-            await _groupAccess.AddGroupAsync(groupName);
+            await _groupAccess.AddGroupAsync(groupName, language);
         }
 
         public async Task<bool> DeleteGroup(string groupName)
@@ -72,21 +72,19 @@ namespace SmartSupervisorBot.Core
             return await _groupAccess.RemoveGroupAsync(groupName);
         }
 
-        public async Task EditGroup(string oldGroupName, string newGroupName)
+        public async Task<bool> EditGroup(string oldGroupName, string newGroupName)
         {
-            bool deleteSuccess = await _groupAccess.RemoveGroupAsync(oldGroupName);
-            if (!deleteSuccess)
-            {
-                Console.WriteLine("Failed to delete the old group.");
-                return;
-            }
-
-            await _groupAccess.AddGroupAsync(newGroupName);
+            return await _groupAccess.RenameGroupAsync(oldGroupName, newGroupName);
         }
 
-        public async Task<List<string>> ListGroups()
+        public async Task<bool> EditLanguage(string groupName, string language)
         {
-            return await _groupAccess.ListAllGroupsAsync();
+            return await _groupAccess.SetGroupLanguageAsync(groupName, language);
+        }
+
+        public async Task<List<(string GroupName, string Language)>> ListGroups()
+        {
+            return await _groupAccess.ListAllGroupsWithLanguagesAsync();
         }
 
         public void Dispose()
@@ -114,7 +112,7 @@ namespace SmartSupervisorBot.Core
                     {
                         return;
                     }
-                    var groupUserName = update.Message.Chat.Username;
+
 
                     if (!(await IsValidGroup(update.Message)))
                     {
@@ -135,7 +133,8 @@ namespace SmartSupervisorBot.Core
                     {
                         return;
                     }
-                    var completionRequest = GetCompletionRequest(language, messageText);
+                    var groupName = GetGroupName(update.Message);
+                    var completionRequest = await GetCompletionRequest(language, messageText, groupName);
 
                     var chatGptResponse = await _api.Completions.CreateCompletionAsync(completionRequest);
 
@@ -172,8 +171,13 @@ namespace SmartSupervisorBot.Core
 
         private async Task<bool> IsValidGroup(Message message)
         {
-            var groupName = message.Chat.Username ?? message.Chat.Title;
+            var groupName = GetGroupName(message);
             return await _groupAccess.GroupExistsAsync(groupName);
+        }
+
+        private string GetGroupName(Message message)
+        {
+            return message.Chat.Username ?? message.Chat.Title;
         }
 
         private async Task InformInvalidGroupAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
@@ -214,12 +218,13 @@ namespace SmartSupervisorBot.Core
             }
         }
 
-        private CompletionRequest GetCompletionRequest(string language, string messageText)
+        private async Task<CompletionRequest> GetCompletionRequest(string language, string messageText, string groupName)
         {
             IBaseOpenAiTextSettings settings;
             string prompt;
-
-            if (language.StartsWith(_botConfigurationOptions.TranslateTheTextTo))
+            var languageGroup = await _groupAccess.GetGroupLanguageAsync(groupName);
+            var languageToTranslate = languageGroup ?? _botConfigurationOptions.TranslateTheTextTo;
+            if (language.StartsWith(languageToTranslate, StringComparison.OrdinalIgnoreCase))
             {
                 settings = _botConfigurationOptions.TextCorrectionSettings;
                 prompt = settings.Prompt;
@@ -227,7 +232,7 @@ namespace SmartSupervisorBot.Core
             else
             {
                 settings = _botConfigurationOptions.TextTranslateSettings;
-                prompt = FormatPrompt(_botConfigurationOptions.TranslateTheTextTo, settings.Prompt);
+                prompt = FormatPrompt(languageToTranslate, settings.Prompt);
             }
 
             return new OpenAI_API.Completions.CompletionRequest
@@ -238,6 +243,7 @@ namespace SmartSupervisorBot.Core
                 Temperature = settings.Temperature
             };
         }
+        
         private string FormatPrompt(string language, string currentPrompt)
         {
             return currentPrompt.Replace("{language}", language);
