@@ -64,21 +64,47 @@ namespace SmartSupervisorBot.Core
 
         public async Task AddGroup(string groupName, string language)
         {
+            if (string.IsNullOrWhiteSpace(groupName) || string.IsNullOrWhiteSpace(language))
+            {
+                throw new ArgumentException("Group name and language must not be null or empty.");
+            }
+
+            int maxGroupNameLength = 255;
+            if (groupName.Length > maxGroupNameLength)
+            {
+                throw new ArgumentException($"Group name must not exceed {maxGroupNameLength} characters.");
+            }
+
             await _groupAccess.AddGroupAsync(groupName, language);
         }
 
         public async Task<bool> DeleteGroup(string groupName)
         {
+            if (string.IsNullOrWhiteSpace(groupName) || string.IsNullOrWhiteSpace(groupName))
+            {
+                throw new ArgumentException("Group name must not be null or empty.");
+            }
+
             return await _groupAccess.RemoveGroupAsync(groupName);
         }
 
         public async Task<bool> EditGroup(string oldGroupName, string newGroupName)
         {
+            if (string.IsNullOrWhiteSpace(oldGroupName) || string.IsNullOrWhiteSpace(newGroupName))
+            {
+                throw new ArgumentException("Group names cannot be null or empty.");
+            }
+
             return await _groupAccess.RenameGroupAsync(oldGroupName, newGroupName);
         }
 
         public async Task<bool> EditLanguage(string groupName, string language)
         {
+            if (string.IsNullOrWhiteSpace(groupName) || string.IsNullOrWhiteSpace(language))
+            {
+                throw new ArgumentException("Group name and language cannot be null or empty.");
+            }
+
             return await _groupAccess.SetGroupLanguageAsync(groupName, language);
         }
 
@@ -243,7 +269,7 @@ namespace SmartSupervisorBot.Core
                 Temperature = settings.Temperature
             };
         }
-        
+
         private string FormatPrompt(string language, string currentPrompt)
         {
             return currentPrompt.Replace("{language}", language);
