@@ -173,14 +173,14 @@ namespace SmartSupervisorBot.ConsoleApp
         {
             Console.WriteLine("Enter the group Id:");
             var groupId = Console.ReadLine();
-            Console.WriteLine("Enter the new language for the group (English, Deutsch, Persisch, Spanisch, Französisch, Arabisch):");
+            Console.WriteLine("Enter the new language for the group (Englisch, Deutsch, Persisch, Spanisch, Französisch, Arabisch):");
             var languageInput = Console.ReadLine().Trim();
 
-            var supportedLanguagesa = new List<string> { "English", "Deutsch", "Persisch", "Spanisch", "Französisch", "Arabisch" };
+            var supportedLanguagesa = new List<string> { "Englisch", "Deutsch", "Persisch", "Spanisch", "Französisch", "Arabisch" };
 
             var supportedLanguages = new Dictionary<string, string>
             {
-                {"english", "English"},
+                {"englisch", "Englisch"},
                 {"deutsch", "Deutsch"},
                 {"persisch", "Persisch"},
                 {"spanisch", "Spanisch"},

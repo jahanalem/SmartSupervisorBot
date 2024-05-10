@@ -12,6 +12,7 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using SmartSupervisorBot.Utilities;
 
 namespace SmartSupervisorBot.Core
 {
@@ -151,7 +152,7 @@ namespace SmartSupervisorBot.Core
         private async Task ProcessTextMessage(Update update, ITelegramBotClient botClient, CancellationToken cancellationToken)
         {
             var messageText = update.Message.Text;
-            var countWords = CountWords(messageText);
+            var countWords = messageText.CountWords();
             if (!messageText.EndsWith("..") || countWords < 4 || countWords > 35)
             {
                 return;
@@ -176,7 +177,7 @@ namespace SmartSupervisorBot.Core
 
             var chatGptResponse = await _api.Completions.CreateCompletionAsync(completionRequest);
 
-            string response = chatGptResponse.ToString().Replace("\n", "").Replace("\r", "").Trim();
+            string response = chatGptResponse.ToString().Replace("\n", "").Replace("\r", "").Trim('"', ' ');
             if (response != messageText)
             {
                 await SendCorrectedTextAsync(botClient, update.Message, response, cancellationToken);
@@ -194,27 +195,6 @@ namespace SmartSupervisorBot.Core
             var groupInfo = new GroupInfo { GroupName = groupName };
             await AddGroup(groupId, groupInfo);
             Console.WriteLine($"Bot was added to the group: {groupName} (ID: {groupId})");
-        }
-        private int CountWords(string input)
-        {
-            int count = 0;
-            int index = 0;
-
-            // skip whitespace until first word
-            while (index < input.Length && char.IsWhiteSpace(input[index])) { index++; }
-
-            while (index < input.Length)
-            {
-                // Skip non-whitespace characters
-                while (index < input.Length && !char.IsWhiteSpace(input[index])) { index++; }
-
-                count++;
-
-                // Skip whitespace until next word
-                while (index < input.Length && char.IsWhiteSpace(input[index])) { index++; }
-            }
-
-            return count;
         }
 
         private async Task UpdateGroupNameAsync(Update update)
@@ -325,7 +305,7 @@ namespace SmartSupervisorBot.Core
             var chatId = message?.Chat.Id ?? 0;
             var messageId = message?.MessageId ?? 0;
             var writer = !string.IsNullOrEmpty(message?.From?.Username) ? $"@{message.From.Username}" : $"{message?.From?.FirstName} {message.From?.LastName}";
-            var correctedText = $"<i> {writer} sagte</i>: <blockquote><i> {response} </i></blockquote>";
+            var correctedText = $"<i>{writer}</i> 🗨️: <blockquote><i>{response}</i></blockquote>";
 
             await botClient.SendTextMessageAsync(
                 chatId: chatId,
