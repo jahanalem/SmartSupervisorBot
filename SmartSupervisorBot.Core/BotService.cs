@@ -153,7 +153,7 @@ namespace SmartSupervisorBot.Core
         {
             var messageText = update.Message.Text;
             var countWords = messageText.CountWords();
-            if (!messageText.EndsWith("..") || countWords < 4 || countWords > 35)
+            if (!messageText.EndsWith("..") || countWords < 4 || countWords > 80)
             {
                 return;
             }
