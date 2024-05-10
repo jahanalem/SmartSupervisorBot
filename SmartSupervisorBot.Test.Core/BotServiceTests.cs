@@ -4,6 +4,7 @@ using Moq;
 using SmartSupervisorBot.Core;
 using SmartSupervisorBot.Core.Settings;
 using SmartSupervisorBot.DataAccess;
+using SmartSupervisorBot.Model;
 
 namespace SmartSupervisorBot.Test.Core
 {
@@ -61,14 +62,19 @@ namespace SmartSupervisorBot.Test.Core
             var mockGroupAccess = new Mock<IGroupAccess>();
             var service = CreateBotService(mockGroupAccess.Object);
 
-            var groupName = "TestGroup";
-            var language = "Englisch";
+            var groupId = 123456789;
+            var groupInfo = new GroupInfo
+            {
+                GroupName = "TestGroup",
+                Language = "Englisch"
+            };
+            
 
             // Act
-            await service.AddGroup(groupName, language);
+            await service.AddGroup(groupId, groupInfo);
 
             // Assert
-            mockGroupAccess.Verify(g => g.AddGroupAsync(groupName, language), Times.Once);
+            mockGroupAccess.Verify(g => g.AddGroupAsync(groupId, groupInfo), Times.Once);
         }
 
         [Fact]

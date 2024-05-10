@@ -5,7 +5,9 @@ using OpenAI_API;
 using OpenAI_API.Completions;
 using SmartSupervisorBot.Core.Settings;
 using SmartSupervisorBot.DataAccess;
+using SmartSupervisorBot.Model;
 using System.Text;
+using System.Text.RegularExpressions;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -62,53 +64,53 @@ namespace SmartSupervisorBot.Core
             _logger.LogInformation("Message reception started successfully.");
         }
 
-        public async Task AddGroup(string groupName, string language)
+        public async Task AddGroup(long groupId, GroupInfo groupInfo)
         {
-            if (string.IsNullOrWhiteSpace(groupName) || string.IsNullOrWhiteSpace(language))
+            if (string.IsNullOrWhiteSpace(groupInfo.GroupName) || string.IsNullOrWhiteSpace(groupInfo.Language))
             {
                 throw new ArgumentException("Group name and language must not be null or empty.");
             }
 
             int maxGroupNameLength = 255;
-            if (groupName.Length > maxGroupNameLength)
+            if (groupInfo.GroupName.Length > maxGroupNameLength)
             {
                 throw new ArgumentException($"Group name must not exceed {maxGroupNameLength} characters.");
             }
 
-            await _groupAccess.AddGroupAsync(groupName, language);
+            await _groupAccess.AddGroupAsync(groupId, groupInfo);
         }
 
-        public async Task<bool> DeleteGroup(string groupName)
+        public async Task<bool> DeleteGroup(string groupId)
         {
-            if (string.IsNullOrWhiteSpace(groupName) || string.IsNullOrWhiteSpace(groupName))
+            if (string.IsNullOrWhiteSpace(groupId) || string.IsNullOrWhiteSpace(groupId))
             {
-                throw new ArgumentException("Group name must not be null or empty.");
+                throw new ArgumentException("Group Id must not be null or empty.");
             }
 
-            return await _groupAccess.RemoveGroupAsync(groupName);
+            return await _groupAccess.RemoveGroupAsync(groupId);
         }
 
-        public async Task<bool> EditGroup(string oldGroupName, string newGroupName)
+        public async Task<bool> EditLanguage(string groupId, string language)
         {
-            if (string.IsNullOrWhiteSpace(oldGroupName) || string.IsNullOrWhiteSpace(newGroupName))
+            if (string.IsNullOrWhiteSpace(groupId) || string.IsNullOrWhiteSpace(language))
             {
-                throw new ArgumentException("Group names cannot be null or empty.");
+                throw new ArgumentException("Group Id and language cannot be null or empty.");
             }
 
-            return await _groupAccess.RenameGroupAsync(oldGroupName, newGroupName);
+            return await _groupAccess.SetGroupLanguageAsync(groupId, language);
         }
 
-        public async Task<bool> EditLanguage(string groupName, string language)
+        public async Task<bool> ToggleGroupActive(string groupId, bool isActive)
         {
-            if (string.IsNullOrWhiteSpace(groupName) || string.IsNullOrWhiteSpace(language))
+            if (string.IsNullOrWhiteSpace(groupId))
             {
-                throw new ArgumentException("Group name and language cannot be null or empty.");
+                throw new ArgumentException("Group Id cannot be null or empty.");
             }
 
-            return await _groupAccess.SetGroupLanguageAsync(groupName, language);
+            return await _groupAccess.SetToggleGroupActive(groupId, isActive);
         }
 
-        public async Task<List<(string GroupName, string Language)>> ListGroups()
+        public async Task<List<(string GroupId, GroupInfo GroupInfo)>> ListGroups()
         {
             return await _groupAccess.ListAllGroupsWithLanguagesAsync();
         }
@@ -138,7 +140,6 @@ namespace SmartSupervisorBot.Core
                     {
                         return;
                     }
-
 
                     if (!(await IsValidGroup(update.Message)))
                     {
@@ -176,10 +177,41 @@ namespace SmartSupervisorBot.Core
                         await SendReactionAsync(chatId, messageId, "🏆");
                     }
                 }
+                else if (update.Type == UpdateType.MyChatMember)
+                {
+                    var myChatMemberUpdate = update.MyChatMember;
+                    if (myChatMemberUpdate.NewChatMember.Status == ChatMemberStatus.Member)
+                    {
+                        var groupId = myChatMemberUpdate.Chat.Id;
+                        var groupName = myChatMemberUpdate.Chat.Title;
+                        var groupInfo = new GroupInfo
+                        {
+                            GroupName = groupName
+                        };
+                        await AddGroup(groupId, groupInfo);
+
+                        Console.WriteLine($"Bot was added to the group: {groupName} (ID: {groupId})");
+                    }
+                }
+                else if (update.Type == UpdateType.Message && update.Message.Type == MessageType.ChatTitleChanged)
+                {
+                    await UpdateGroupNameAsync(update);
+                }
             }
             catch (Exception ex)
             {
                 await HandleErrorAsync(botClient, ex, cancellationToken);
+            }
+        }
+
+        private async Task UpdateGroupNameAsync(Update update)
+        {
+            var newGroupName = update.Message.NewChatTitle;
+            if (!string.IsNullOrEmpty(newGroupName))
+            {
+                var groupId = update.Message.Chat.Id;
+                await _groupAccess.UpdateGroupNameAsync(groupId.ToString(), newGroupName);
+                _logger.LogInformation($"Group name updated to '{newGroupName}' for group ID: {groupId}");
             }
         }
 
@@ -197,8 +229,8 @@ namespace SmartSupervisorBot.Core
 
         private async Task<bool> IsValidGroup(Message message)
         {
-            var groupName = GetGroupName(message);
-            return await _groupAccess.GroupExistsAsync(groupName);
+            var groupId = message.Chat.Id.ToString();
+            return await _groupAccess.IsActivatedGroup(groupId);
         }
 
         private string GetGroupName(Message message)

@@ -68,19 +68,19 @@ namespace SmartSupervisorBot.ConsoleApp
             while (true)
             {
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("Enter command (add, delete, edit, setlang, list, exit):");
+                Console.WriteLine("Enter command (active, setlang, add, delete, list, exit):");
                 Console.ForegroundColor = ConsoleColor.White;
                 var command = Console.ReadLine();
                 switch (command.ToLower())
                 {
+                    case "active":
+                        await ExecuteToggleGroupActive(botService);
+                        break;
                     case "add":
                         await ExecuteAddGroup(botService);
                         break;
                     case "delete":
                         await ExecuteDeleteGroup(botService);
-                        break;
-                    case "edit":
-                        await ExecuteEditGroup(botService);
                         break;
                     case "setlang":
                         await ExecuteSetLanguage(botService);
@@ -102,15 +102,48 @@ namespace SmartSupervisorBot.ConsoleApp
             }
         }
 
+        static async Task ExecuteToggleGroupActive(BotService botService)
+        {
+            Console.WriteLine("Enter the group ID:");
+            var groupId = Console.ReadLine();
+            Console.WriteLine("Do you want to activate (yes) or deactivate (no) the group?");
+            var action = Console.ReadLine();
+
+            bool isActive = action.Trim().ToLower() == "yes";
+            var success = await botService.ToggleGroupActive(groupId, isActive);
+
+            if (success)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"Group {(isActive ? "activated" : "deactivated")} successfully.");
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Failed to change group status.");
+            }
+            Console.ResetColor();
+        }
+
+
         static async Task ExecuteAddGroup(BotService botService)
         {
+            Console.WriteLine("Enter a group Id to add:");
+            var groupId = Console.ReadLine();
+
             Console.WriteLine("Enter a group name to add:");
             var groupName = Console.ReadLine();
 
             Console.WriteLine("Enter a language to add:");
             var language = Console.ReadLine();
 
-            await botService.AddGroup(groupName, language.Trim());
+            var groupInfo = new Model.GroupInfo
+            {
+                GroupName = groupName,
+                Language = language.Trim(),
+            };
+
+            await botService.AddGroup(long.Parse(groupId), groupInfo);
 
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("Group added successfully.");
@@ -119,9 +152,9 @@ namespace SmartSupervisorBot.ConsoleApp
 
         static async Task ExecuteDeleteGroup(BotService botService)
         {
-            Console.WriteLine("Enter a group name to delete:");
-            var groupName = Console.ReadLine();
-            var isDeleted = await botService.DeleteGroup(groupName.Trim());
+            Console.WriteLine("Enter a group Id to delete:");
+            var groupId = Console.ReadLine();
+            var isDeleted = await botService.DeleteGroup(groupId.Trim());
             if (isDeleted)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
@@ -137,31 +170,10 @@ namespace SmartSupervisorBot.ConsoleApp
 
         }
 
-        static async Task ExecuteEditGroup(BotService botService)
-        {
-            Console.WriteLine("Enter the current group name:");
-            var currentName = Console.ReadLine();
-            Console.WriteLine("Enter the new group name:");
-            var newName = Console.ReadLine();
-
-            var renamed = await botService.EditGroup(currentName.Trim(), newName.Trim());
-            if (renamed)
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Group renamed successfully.");
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Failed to rename group or group not found.");
-            }
-            Console.ResetColor();
-        }
-
         static async Task ExecuteSetLanguage(BotService botService)
         {
-            Console.WriteLine("Enter the group name:");
-            var groupName = Console.ReadLine();
+            Console.WriteLine("Enter the group Id:");
+            var groupId = Console.ReadLine();
             Console.WriteLine("Enter the new language for the group (English, Deutsch, Persisch, Spanisch, Französisch, Arabisch):");
             var languageInput = Console.ReadLine().Trim();
 
@@ -185,7 +197,7 @@ namespace SmartSupervisorBot.ConsoleApp
                 return;
             }
 
-            var languageSet = await botService.EditLanguage(groupName.Trim(), normalizedLanguage);
+            var languageSet = await botService.EditLanguage(groupId.Trim(), normalizedLanguage);
             if (languageSet)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
@@ -203,10 +215,15 @@ namespace SmartSupervisorBot.ConsoleApp
         {
             var groups = await botService.ListGroups();
             Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.WriteLine("List of groups with their languages:");
+            Console.WriteLine("List of groups:");
             foreach (var group in groups)
             {
-                Console.WriteLine($"Group: {group.GroupName}, Language: {group.Language}");
+                Console.WriteLine(
+                    $"Id: {group.GroupId}, " +
+                    $"Name: {group.GroupInfo.GroupName}, " +
+                    $"Language: {group.GroupInfo.Language}, " +
+                    $"Active: {group.GroupInfo.IsActive}, " +
+                    $"Created Date: {group.GroupInfo.CreatedDate.ToLocalTime()}");
             }
             Console.ResetColor();
         }

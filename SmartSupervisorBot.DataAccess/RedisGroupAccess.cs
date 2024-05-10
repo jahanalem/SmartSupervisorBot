@@ -1,4 +1,8 @@
-﻿using StackExchange.Redis;
+﻿using Newtonsoft.Json;
+using SmartSupervisorBot.Model;
+using StackExchange.Redis;
+using System.Text.Json.Serialization;
+
 
 namespace SmartSupervisorBot.DataAccess
 {
@@ -13,9 +17,11 @@ namespace SmartSupervisorBot.DataAccess
             _db = _redis.GetDatabase();
         }
 
-        public async Task<bool> AddGroupAsync(string groupName, string language)
+        public async Task<bool> AddGroupAsync(long groupId, GroupInfo groupInfo)
         {
-            return await _db.StringSetAsync(groupName, language);
+            var groupData = JsonConvert.SerializeObject(groupInfo);
+
+            return await _db.StringSetAsync(groupId.ToString(), groupData);
         }
 
         public async Task<string> GetGroupLanguageAsync(string groupName)
@@ -34,19 +40,72 @@ namespace SmartSupervisorBot.DataAccess
             return false;
         }
 
-        public async Task<bool> SetGroupLanguageAsync(string groupName, string newLanguage)
+        public async Task UpdateGroupNameAsync(string groupId, string newGroupName)
         {
-            return await _db.StringSetAsync(groupName, newLanguage);
+            var groupInfoString = await _db.StringGetAsync(groupId);
+            if (!groupInfoString.IsNullOrEmpty)
+            {
+                var groupInfo = JsonConvert.DeserializeObject<GroupInfo>(groupInfoString);
+                groupInfo.GroupName = newGroupName;
+                var updatedGroupInfoString = JsonConvert.SerializeObject(groupInfo);
+                await _db.StringSetAsync(groupId, updatedGroupInfoString);
+                Console.WriteLine($"Updated group name to {newGroupName} for group ID: {groupId}");
+            }
+            else
+            {
+                Console.WriteLine("Group not found or no name to update.");
+            }
         }
 
-        public async Task<bool> GroupExistsAsync(string groupName)
+        public async Task<bool> SetGroupLanguageAsync(string groupId, string newLanguage)
         {
-            return await _db.KeyExistsAsync(groupName);
+            var groupInfoString = await _db.StringGetAsync(groupId);
+            if (!groupInfoString.IsNullOrEmpty)
+            {
+                var groupInfo = JsonConvert.DeserializeObject<GroupInfo>(groupInfoString);
+                groupInfo.Language = newLanguage;
+                var updatedGroupInfoString = JsonConvert.SerializeObject(groupInfo);
+                return await _db.StringSetAsync(groupId, updatedGroupInfoString);
+            }
+            else
+            {
+                Console.WriteLine("Group not found or no language to update.");
+                return false;
+            }
         }
 
-        public async Task<bool> RemoveGroupAsync(string groupName)
+        public async Task<bool> SetToggleGroupActive(string groupId, bool isActive)
         {
-            return await _db.KeyDeleteAsync(groupName);
+            var groupInfoString = await _db.StringGetAsync(groupId);
+            if ((!groupInfoString.IsNullOrEmpty))
+            {
+                var groupInfo = JsonConvert.DeserializeObject<GroupInfo>(groupInfoString);
+                groupInfo.IsActive = isActive;
+                var updatedGroupInfoString = JsonConvert.SerializeObject(groupInfo);
+                return await _db.StringSetAsync(groupId, updatedGroupInfoString);
+            }
+            else
+            {
+                Console.WriteLine("Group not found to update.");
+                return false;
+            }
+        }
+        public async Task<bool> GroupExistsAsync(string groupId)
+        {
+            return await _db.KeyExistsAsync(groupId);
+        }
+
+        public async Task<bool> IsActivatedGroup(string groupId)
+        {
+            var groupInfoString = await _db.StringGetAsync(groupId);
+            var groupInfo = JsonConvert.DeserializeObject<GroupInfo>(groupInfoString);
+
+            return groupInfo.IsActive;
+        }
+
+        public async Task<bool> RemoveGroupAsync(string groupId)
+        {
+            return await _db.KeyDeleteAsync(groupId);
         }
 
         public async Task<List<string>> ListAllGroupNamesAsync()
@@ -57,19 +116,20 @@ namespace SmartSupervisorBot.DataAccess
             return keys.ToList();
         }
 
-        public async Task<List<(string GroupName, string Language)>> ListAllGroupsWithLanguagesAsync()
+        public async Task<List<(string GroupId, GroupInfo GroupInfo)>> ListAllGroupsWithLanguagesAsync()
         {
             var server = _redis.GetServer(_redis.GetEndPoints().First());
             var keys = server.Keys();
-            var groupsWithLanguages = new List<(string, string)>();
+            var groupInfos = new List<(string, GroupInfo)>();
 
             foreach (var key in keys)
             {
-                var language = await _db.StringGetAsync(key);
-                groupsWithLanguages.Add((key.ToString(), language));
+                var groupInfoJson = await _db.StringGetAsync(key);
+                var groupInfo = JsonConvert.DeserializeObject<GroupInfo>(groupInfoJson);
+                groupInfos.Add((key.ToString(), groupInfo));
             }
 
-            return groupsWithLanguages;
+            return groupInfos;
         }
     }
 }

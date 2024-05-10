@@ -1,14 +1,19 @@
-﻿namespace SmartSupervisorBot.DataAccess
+﻿using SmartSupervisorBot.Model;
+using System.Text.RegularExpressions;
+
+namespace SmartSupervisorBot.DataAccess
 {
     public interface IGroupAccess
     {
-        Task<bool> AddGroupAsync(string groupName, string language);
+        Task<bool> IsActivatedGroup(string groupId);
+        Task<bool> SetToggleGroupActive(string groupId, bool isActive);
+        Task<bool> AddGroupAsync(long groupId, GroupInfo groupInfo);
         Task<string> GetGroupLanguageAsync(string groupName);
-        Task<bool> RenameGroupAsync(string oldGroupName, string newGroupName);
-        Task<bool> SetGroupLanguageAsync(string groupName, string newLanguage);
-        Task<bool> RemoveGroupAsync(string groupName);
-        Task<bool> GroupExistsAsync(string groupName);
+        Task<bool> SetGroupLanguageAsync(string groupId, string newLanguage);
+        Task<bool> RemoveGroupAsync(string groupId);
+        Task<bool> GroupExistsAsync(string groupId);
         Task<List<string>> ListAllGroupNamesAsync();
-        Task<List<(string GroupName, string Language)>> ListAllGroupsWithLanguagesAsync();
+        Task<List<(string GroupId, GroupInfo GroupInfo)>> ListAllGroupsWithLanguagesAsync();
+        Task UpdateGroupNameAsync(string groupId, string newGroupName);
     }
 }
