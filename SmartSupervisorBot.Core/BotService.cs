@@ -125,83 +125,96 @@ namespace SmartSupervisorBot.Core
         {
             try
             {
-                if (update.Type == UpdateType.Message && update?.Message?.Type == MessageType.Text)
+                if (update.Type == UpdateType.Message)
                 {
-                    var messageText = update.Message?.Text?.Trim();
-                    if (messageText?.Split(' ').Length < 4)
+                    switch (update.Message.Type)
                     {
-                        _logger.LogInformation("Your sentence has less than four words, that's why the bot doesn't react to it.");
-                        return;
-                    }
-
-                    var chatId = update.Message?.Chat.Id ?? 0;
-                    var messageId = update.Message?.MessageId ?? 0;
-                    if (chatId == 0)
-                    {
-                        return;
-                    }
-
-                    if (!(await IsValidGroup(update.Message)))
-                    {
-                        await InformInvalidGroupAsync(botClient, update, cancellationToken);
-
-                        return;
-                    }
-
-                    if (await IsValidGroup(update.Message) &&
-                        (update.Message.MessageThreadId != null &&
-                         update.Message?.ReplyToMessage?.MessageThreadId != null))
-                    {
-                        return;
-                    }
-
-                    var language = await DetectLanguageAsync(messageText);
-                    if (!IsValidLanguageResponse(language))
-                    {
-                        return;
-                    }
-                    var groupName = GetGroupName(update.Message);
-                    var completionRequest = await GetCompletionRequest(language, messageText, groupName);
-
-                    var chatGptResponse = await _api.Completions.CreateCompletionAsync(completionRequest);
-
-                    _logger.LogInformation($"Received a message in chat {chatId}: {messageText}");
-
-                    string response = chatGptResponse.ToString().Replace("\"", "").Trim();
-                    if (response != messageText)
-                    {
-                        await SendCorrectedTextAsync(botClient, update.Message, response, cancellationToken);
-                    }
-                    else
-                    {
-                        await SendReactionAsync(chatId, messageId, "🏆");
+                        case MessageType.Text:
+                            await ProcessTextMessage(update, botClient, cancellationToken);
+                            break;
+                        case MessageType.ChatTitleChanged:
+                            await UpdateGroupNameAsync(update);
+                            break;
                     }
                 }
-                else if (update.Type == UpdateType.MyChatMember)
+                else if (update.Type == UpdateType.MyChatMember && update.MyChatMember.NewChatMember.Status == ChatMemberStatus.Member)
                 {
-                    var myChatMemberUpdate = update.MyChatMember;
-                    if (myChatMemberUpdate.NewChatMember.Status == ChatMemberStatus.Member)
-                    {
-                        var groupId = myChatMemberUpdate.Chat.Id;
-                        var groupName = myChatMemberUpdate.Chat.Title;
-                        var groupInfo = new GroupInfo
-                        {
-                            GroupName = groupName
-                        };
-                        await AddGroup(groupId, groupInfo);
-
-                        Console.WriteLine($"Bot was added to the group: {groupName} (ID: {groupId})");
-                    }
-                }
-                else if (update.Type == UpdateType.Message && update.Message.Type == MessageType.ChatTitleChanged)
-                {
-                    await UpdateGroupNameAsync(update);
+                    await HandleNewChatMember(update);
                 }
             }
             catch (Exception ex)
             {
                 await HandleErrorAsync(botClient, ex, cancellationToken);
             }
+        }
+
+        private async Task ProcessTextMessage(Update update, ITelegramBotClient botClient, CancellationToken cancellationToken)
+        {
+            var messageText = update.Message.Text;
+            var countWords = CountWords(messageText);
+            if (!messageText.EndsWith("..") || countWords < 4 || countWords > 35)
+            {
+                return;
+            }
+            messageText = messageText.Remove(messageText.Length - 1);
+
+            bool isValidGroup = await IsValidGroup(update.Message);
+            if (!isValidGroup)
+            {
+                await InformInvalidGroupAsync(botClient, update, cancellationToken);
+                return;
+            }
+
+            var language = await DetectLanguageAsync(messageText);
+            if (!IsValidLanguageResponse(language))
+            {
+                return;
+            }
+
+            var groupId = update.Message.Chat.Id.ToString();
+            var completionRequest = await GetCompletionRequest(language, messageText, groupId);
+
+            var chatGptResponse = await _api.Completions.CreateCompletionAsync(completionRequest);
+
+            string response = chatGptResponse.ToString().Replace("\n", "").Replace("\r", "").Trim();
+            if (response != messageText)
+            {
+                await SendCorrectedTextAsync(botClient, update.Message, response, cancellationToken);
+            }
+            else
+            {
+                await SendReactionAsync(update.Message.Chat.Id, update.Message.MessageId, "🏆");
+            }
+        }
+
+        private async Task HandleNewChatMember(Update update)
+        {
+            var groupId = update.MyChatMember.Chat.Id;
+            var groupName = update.MyChatMember.Chat.Title;
+            var groupInfo = new GroupInfo { GroupName = groupName };
+            await AddGroup(groupId, groupInfo);
+            Console.WriteLine($"Bot was added to the group: {groupName} (ID: {groupId})");
+        }
+        private int CountWords(string input)
+        {
+            int count = 0;
+            int index = 0;
+
+            // skip whitespace until first word
+            while (index < input.Length && char.IsWhiteSpace(input[index])) { index++; }
+
+            while (index < input.Length)
+            {
+                // Skip non-whitespace characters
+                while (index < input.Length && !char.IsWhiteSpace(input[index])) { index++; }
+
+                count++;
+
+                // Skip whitespace until next word
+                while (index < input.Length && char.IsWhiteSpace(input[index])) { index++; }
+            }
+
+            return count;
         }
 
         private async Task UpdateGroupNameAsync(Update update)
@@ -276,11 +289,11 @@ namespace SmartSupervisorBot.Core
             }
         }
 
-        private async Task<CompletionRequest> GetCompletionRequest(string language, string messageText, string groupName)
+        private async Task<CompletionRequest> GetCompletionRequest(string language, string messageText, string groupId)
         {
             IBaseOpenAiTextSettings settings;
             string prompt;
-            var languageGroup = await _groupAccess.GetGroupLanguageAsync(groupName);
+            var languageGroup = await _groupAccess.GetGroupLanguageAsync(groupId);
             var languageToTranslate = languageGroup ?? _botConfigurationOptions.TranslateTheTextTo;
             if (language.StartsWith(languageToTranslate, StringComparison.OrdinalIgnoreCase))
             {

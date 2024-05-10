@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.Caching.Memory;
+using Newtonsoft.Json;
 using SmartSupervisorBot.Model;
 using StackExchange.Redis;
 using System.Text.Json.Serialization;
@@ -10,6 +11,7 @@ namespace SmartSupervisorBot.DataAccess
     {
         private readonly ConnectionMultiplexer _redis;
         private readonly IDatabase _db;
+        private readonly MemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
 
         public RedisGroupAccess(string connectionString)
         {
@@ -24,9 +26,20 @@ namespace SmartSupervisorBot.DataAccess
             return await _db.StringSetAsync(groupId.ToString(), groupData);
         }
 
-        public async Task<string> GetGroupLanguageAsync(string groupName)
+        public async Task<string> GetGroupLanguageAsync(string groupId)
         {
-            return await _db.StringGetAsync(groupName);
+            string cacheKey = $"groupLanguage-{groupId}";
+            if (_cache.TryGetValue(cacheKey, out string language))
+            {
+                return language;
+            }
+            var groupInfoString = await _db.StringGetAsync(groupId);
+            var groupInfo = JsonConvert.DeserializeObject<GroupInfo>(groupInfoString);
+            language = groupInfo.Language;
+
+            _cache.Set(cacheKey, language, TimeSpan.FromDays(30));
+
+            return language;
         }
 
         public async Task<bool> RenameGroupAsync(string oldGroupName, string newGroupName)
@@ -63,33 +76,44 @@ namespace SmartSupervisorBot.DataAccess
             if (!groupInfoString.IsNullOrEmpty)
             {
                 var groupInfo = JsonConvert.DeserializeObject<GroupInfo>(groupInfoString);
-                groupInfo.Language = newLanguage;
-                var updatedGroupInfoString = JsonConvert.SerializeObject(groupInfo);
-                return await _db.StringSetAsync(groupId, updatedGroupInfoString);
+                if (groupInfo.Language != newLanguage)
+                {
+                    groupInfo.Language = newLanguage;
+                    var updatedGroupInfoString = JsonConvert.SerializeObject(groupInfo);
+                    await _db.StringSetAsync(groupId, updatedGroupInfoString);
+                    _cache.Set($"groupLanguage-{groupId}", newLanguage, TimeSpan.FromDays(30));
+                    return true;
+                }
             }
             else
             {
                 Console.WriteLine("Group not found or no language to update.");
-                return false;
             }
+            return false;
         }
 
         public async Task<bool> SetToggleGroupActive(string groupId, bool isActive)
         {
             var groupInfoString = await _db.StringGetAsync(groupId);
-            if ((!groupInfoString.IsNullOrEmpty))
+            if (!groupInfoString.IsNullOrEmpty)
             {
                 var groupInfo = JsonConvert.DeserializeObject<GroupInfo>(groupInfoString);
-                groupInfo.IsActive = isActive;
-                var updatedGroupInfoString = JsonConvert.SerializeObject(groupInfo);
-                return await _db.StringSetAsync(groupId, updatedGroupInfoString);
+                if (groupInfo.IsActive != isActive)
+                {
+                    groupInfo.IsActive = isActive;
+                    var updatedGroupInfoString = JsonConvert.SerializeObject(groupInfo);
+                    await _db.StringSetAsync(groupId, updatedGroupInfoString);
+                    _cache.Set($"groupActive-{groupId}", isActive, TimeSpan.FromDays(30));
+                    return true;
+                }
             }
             else
             {
                 Console.WriteLine("Group not found to update.");
-                return false;
             }
+            return false;
         }
+
         public async Task<bool> GroupExistsAsync(string groupId)
         {
             return await _db.KeyExistsAsync(groupId);
@@ -97,10 +121,17 @@ namespace SmartSupervisorBot.DataAccess
 
         public async Task<bool> IsActivatedGroup(string groupId)
         {
-            var groupInfoString = await _db.StringGetAsync(groupId);
-            var groupInfo = JsonConvert.DeserializeObject<GroupInfo>(groupInfoString);
-
-            return groupInfo.IsActive;
+            if (!_cache.TryGetValue(groupId, out bool isActive))
+            {
+                var groupInfoString = await _db.StringGetAsync(groupId);
+                if ((!string.IsNullOrEmpty(groupInfoString)))
+                {
+                    var groupInfo = JsonConvert.DeserializeObject<GroupInfo>(groupInfoString);
+                    isActive = groupInfo.IsActive;
+                    _cache.Set($"groupActive-{groupId}", isActive, TimeSpan.FromDays(30));
+                }
+            }
+            return isActive;
         }
 
         public async Task<bool> RemoveGroupAsync(string groupId)

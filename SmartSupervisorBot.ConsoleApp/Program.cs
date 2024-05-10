@@ -125,7 +125,6 @@ namespace SmartSupervisorBot.ConsoleApp
             Console.ResetColor();
         }
 
-
         static async Task ExecuteAddGroup(BotService botService)
         {
             Console.WriteLine("Enter a group Id to add:");
