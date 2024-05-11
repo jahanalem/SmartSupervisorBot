@@ -152,11 +152,17 @@ namespace SmartSupervisorBot.Core
         private async Task ProcessTextMessage(Update update, ITelegramBotClient botClient, CancellationToken cancellationToken)
         {
             var messageText = update.Message.Text;
-            var countWords = messageText.CountWords();
-            if (!messageText.EndsWith("..") || countWords < 4 || countWords > 80)
+
+            if (!(messageText.EndsWith("..") || messageText.EndsWith("。。")))
             {
                 return;
             }
+            var countWords = messageText.CountWords();
+            if (!(countWords >= 1 && countWords <= 80))
+            {
+                return;
+            }
+
             messageText = messageText.Remove(messageText.Length - 1);
 
             bool isValidGroup = await IsValidGroup(update.Message);
