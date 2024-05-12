@@ -172,21 +172,16 @@ namespace SmartSupervisorBot.Core
                 return;
             }
 
-            var language = await DetectLanguageAsync(messageText);
-            if (!IsValidLanguageResponse(language))
-            {
-                return;
-            }
-
             var groupId = update.Message.Chat.Id.ToString();
-            var completionRequest = await GetCompletionRequest(language, messageText, groupId);
+
+            var completionRequest = await BuildTextProcessingRequestAsync(messageText, groupId);
 
             var chatGptResponse = await _api.Completions.CreateCompletionAsync(completionRequest);
 
             string response = chatGptResponse.ToString().Replace("\n", "").Replace("\r", "").Trim('"', ' ');
             if (response != messageText)
             {
-                await SendCorrectedTextAsync(botClient, update.Message, response, cancellationToken);
+                await SendProcessedTextAsync(botClient, update.Message, response, cancellationToken);
             }
             else
             {
@@ -275,22 +270,13 @@ namespace SmartSupervisorBot.Core
             }
         }
 
-        private async Task<CompletionRequest> GetCompletionRequest(string language, string messageText, string groupId)
+        private async Task<CompletionRequest> BuildTextProcessingRequestAsync(string messageText, string groupId)
         {
-            IBaseOpenAiTextSettings settings;
-            string prompt;
+            var settings = _botConfigurationOptions.UnifiedTextSettings;
             var languageGroup = await _groupAccess.GetGroupLanguageAsync(groupId);
-            var languageToTranslate = languageGroup ?? _botConfigurationOptions.TranslateTheTextTo;
-            if (language.StartsWith(languageToTranslate, StringComparison.OrdinalIgnoreCase))
-            {
-                settings = _botConfigurationOptions.TextCorrectionSettings;
-                prompt = settings.Prompt;
-            }
-            else
-            {
-                settings = _botConfigurationOptions.TextTranslateSettings;
-                prompt = FormatPrompt(languageToTranslate, settings.Prompt);
-            }
+            var languageToUse = languageGroup ?? _botConfigurationOptions.TranslateTheTextTo;
+
+            string prompt = settings.Prompt.Replace("{language}", languageToUse);
 
             return new OpenAI_API.Completions.CompletionRequest
             {
@@ -306,7 +292,7 @@ namespace SmartSupervisorBot.Core
             return currentPrompt.Replace("{language}", language);
         }
 
-        private async Task SendCorrectedTextAsync(ITelegramBotClient botClient, Message message, string response, CancellationToken cancellationToken)
+        private async Task SendProcessedTextAsync(ITelegramBotClient botClient, Message message, string response, CancellationToken cancellationToken)
         {
             var chatId = message?.Chat.Id ?? 0;
             var messageId = message?.MessageId ?? 0;
