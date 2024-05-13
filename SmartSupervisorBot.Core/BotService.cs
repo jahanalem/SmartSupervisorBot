@@ -67,18 +67,23 @@ namespace SmartSupervisorBot.Core
 
         public async Task AddGroup(long groupId, GroupInfo groupInfo)
         {
-            if (string.IsNullOrWhiteSpace(groupInfo.GroupName) || string.IsNullOrWhiteSpace(groupInfo.Language))
-            {
-                throw new ArgumentException("Group name and language must not be null or empty.");
-            }
-
-            int maxGroupNameLength = 255;
-            if (groupInfo.GroupName.Length > maxGroupNameLength)
-            {
-                throw new ArgumentException($"Group name must not exceed {maxGroupNameLength} characters.");
-            }
+            ValidateGroupParameters(groupId, groupInfo);
 
             await _groupAccess.AddGroupAsync(groupId, groupInfo);
+        }
+        private void ValidateGroupParameters(long groupId, GroupInfo groupInfo)
+        {
+            if (groupId == 0)
+            {
+                throw new ArgumentException("Group Id cannot be 0.", nameof(groupId));
+            }
+
+            if (groupInfo == null)
+            {
+                throw new ArgumentException("Group info cannot be null.", nameof(groupInfo));
+            }
+
+            groupInfo.Validate(); // Validation within the GroupInfo class
         }
 
         public async Task<bool> DeleteGroup(string groupId)

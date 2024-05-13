@@ -19,5 +19,23 @@ namespace SmartSupervisorBot.Model
             IsActive = false;
             Language = "Deutsch";
         }
+
+        public void Validate()
+        {
+            if (string.IsNullOrWhiteSpace(GroupName))
+            {
+                throw new ArgumentException("Group name must not be null or empty.", nameof(GroupName));
+            }
+
+            if (GroupName.Length > 255)
+            {
+                throw new ArgumentException("Group name must not exceed 255 characters.", nameof(GroupName));
+            }
+
+            if (string.IsNullOrWhiteSpace(Language))
+            {
+                throw new ArgumentException("Language must not be null or empty.", nameof(Language));
+            }
+        }
     }
 }
