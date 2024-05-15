@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using OpenAI_API;
-using OpenAI_API.Completions;
 using SmartSupervisorBot.Core.Settings;
 using SmartSupervisorBot.DataAccess;
 using SmartSupervisorBot.Model;
@@ -13,6 +11,7 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using SmartSupervisorBot.Utilities;
+using SmartSupervisorBot.TextProcessing;
 
 namespace SmartSupervisorBot.Core
 {
@@ -21,7 +20,7 @@ namespace SmartSupervisorBot.Core
         private readonly ILogger<BotService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly string _botToken;
-        private readonly OpenAIAPI _api;
+        private readonly ITextProcessingService _textProcessingService;
         private readonly CancellationTokenSource _cts;
         private TelegramBotClient _botClient;
         private readonly BotConfigurationOptions _botConfigurationOptions;
@@ -30,16 +29,19 @@ namespace SmartSupervisorBot.Core
 
         public BotService(IOptions<BotConfigurationOptions> botConfigurationOptions,
             IHttpClientFactory httpClientFactory,
-            IGroupAccess groupAccess, ILogger<BotService> logger)
+            IGroupAccess groupAccess, ILogger<BotService> logger,
+            ITextProcessingService textProcessingService)
         {
             _botConfigurationOptions = botConfigurationOptions.Value;
             _httpClientFactory = httpClientFactory;
             _botToken = _botConfigurationOptions.BotSettings.BotToken;
-            _api = new OpenAIAPI(_botConfigurationOptions.BotSettings.OpenAiToken);
+            _textProcessingService = textProcessingService;
             _cts = new CancellationTokenSource();
             _botClient = new TelegramBotClient(_botToken, _httpClientFactory.CreateClient());
             _logger = logger;
             _groupAccess = groupAccess;
+
+            _logger.LogInformation("BotService initialized.");
         }
 
 
@@ -50,6 +52,7 @@ namespace SmartSupervisorBot.Core
 
         public void StartReceivingMessages()
         {
+            _logger.LogInformation("Starting to receive messages...");
             string[] updateStrings = _botConfigurationOptions.AllowedUpdatesSettings?.AllowedUpdates ?? Array.Empty<string>();
             UpdateType[] updates = ConvertStringToUpdateType(updateStrings);
 
@@ -129,6 +132,8 @@ namespace SmartSupervisorBot.Core
 
         private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
+            _logger.LogInformation("Received update of type {UpdateType}", update.Type);
+
             try
             {
                 if (update.Type == UpdateType.Message)
@@ -136,6 +141,7 @@ namespace SmartSupervisorBot.Core
                     switch (update.Message.Type)
                     {
                         case MessageType.Text:
+                            _logger.LogInformation("Received text message: {MessageText}", update.Message.Text);
                             await ProcessTextMessage(update, botClient, cancellationToken);
                             break;
                         case MessageType.ChatTitleChanged:
@@ -160,11 +166,13 @@ namespace SmartSupervisorBot.Core
 
             if (!(messageText.EndsWith("..") || messageText.EndsWith("。。")))
             {
+                _logger.LogInformation("Message does not end with .. or 。。");
                 return;
             }
             var countWords = messageText.CountWords();
             if (!(countWords >= 1 && countWords <= 80))
             {
+                _logger.LogInformation("Message word count is not within the expected range");
                 return;
             }
 
@@ -179,14 +187,11 @@ namespace SmartSupervisorBot.Core
 
             var groupId = update.Message.Chat.Id.ToString();
 
-            var completionRequest = await BuildTextProcessingRequestAsync(messageText, groupId);
+            var result = await BuildTextProcessingRequestAsync(messageText, groupId);
 
-            var chatGptResponse = await _api.Completions.CreateCompletionAsync(completionRequest);
-
-            string response = chatGptResponse.ToString().Replace("\n", "").Replace("\r", "").Trim('"', ' ');
-            if (response != messageText)
+            if (result != messageText)
             {
-                await SendProcessedTextAsync(botClient, update.Message, response, cancellationToken);
+                await SendProcessedTextAsync(botClient, update.Message, result, cancellationToken);
             }
             else
             {
@@ -275,21 +280,18 @@ namespace SmartSupervisorBot.Core
             }
         }
 
-        private async Task<CompletionRequest> BuildTextProcessingRequestAsync(string messageText, string groupId)
+        private async Task<string> BuildTextProcessingRequestAsync(string messageText, string groupId)
         {
             var settings = _botConfigurationOptions.UnifiedTextSettings;
             var languageGroup = await _groupAccess.GetGroupLanguageAsync(groupId);
             var languageToUse = languageGroup ?? _botConfigurationOptions.TranslateTheTextTo;
 
             string prompt = settings.Prompt.Replace("{language}", languageToUse);
+            string promptWithMessage = $"{prompt} '{messageText}'";
 
-            return new OpenAI_API.Completions.CompletionRequest
-            {
-                Prompt = $"{prompt} '{messageText}'",
-                Model = settings.Model,
-                MaxTokens = settings.MaxTokens,
-                Temperature = settings.Temperature
-            };
+            var response = await _textProcessingService.ProcessTextAsync(promptWithMessage, settings.Model, settings.MaxTokens, settings.Temperature);
+
+            return response;
         }
 
         private string FormatPrompt(string language, string currentPrompt)
@@ -329,15 +331,13 @@ namespace SmartSupervisorBot.Core
 
         private async Task<string> DetectLanguageAsync(string text)
         {
-            var response = await _api.Completions.CreateCompletionAsync(new OpenAI_API.Completions.CompletionRequest
-            {
-                Prompt = $"{_botConfigurationOptions.LanguageDetectionSettings.Prompt} '{text}'",
-                Model = _botConfigurationOptions.LanguageDetectionSettings.Model,
-                MaxTokens = _botConfigurationOptions.LanguageDetectionSettings.MaxTokens,
-                Temperature = _botConfigurationOptions.LanguageDetectionSettings.Temperature
-            });
+            var prompt = $"{_botConfigurationOptions.LanguageDetectionSettings.Prompt} '{text}'";
+            var model = _botConfigurationOptions.LanguageDetectionSettings.Model;
+            var maxTokens = _botConfigurationOptions.LanguageDetectionSettings.MaxTokens;
+            var temperature = _botConfigurationOptions.LanguageDetectionSettings.Temperature;
+            var result = await _textProcessingService.ProcessTextAsync(prompt, model, maxTokens, temperature);
 
-            return response.ToString().Trim();
+            return result;
         }
     }
 }

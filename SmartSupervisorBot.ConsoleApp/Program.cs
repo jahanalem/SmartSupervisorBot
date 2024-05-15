@@ -2,9 +2,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Serilog;
 using SmartSupervisorBot.Core;
 using SmartSupervisorBot.Core.Settings;
 using SmartSupervisorBot.DataAccess;
+using SmartSupervisorBot.TextProcessing;
 
 namespace SmartSupervisorBot.ConsoleApp
 {
@@ -13,6 +15,12 @@ namespace SmartSupervisorBot.ConsoleApp
         static async Task Main(string[] args)
         {
             IConfiguration configuration = BuildConfiguration();
+
+            Log.Logger = new LoggerConfiguration()
+           .ReadFrom.Configuration(configuration)
+           .WriteTo.Console()
+           .WriteTo.File("Logs/app-.log", rollingInterval: RollingInterval.Day)
+           .CreateLogger();
 
             var services = new ServiceCollection();
             ConfigureServices(services, configuration);
@@ -48,10 +56,17 @@ namespace SmartSupervisorBot.ConsoleApp
             services.Configure<BotConfigurationOptions>(configuration.GetSection("BotConfiguration"));
             services.AddSingleton<IConfiguration>(configuration);
             services.AddHttpClient();
+            services.AddSingleton<ITextProcessingService>(provider =>
+            {
+                var options = provider.GetRequiredService<IOptions<BotConfigurationOptions>>();
+                return new OpenAiTextProcessingService(options.Value.BotSettings.OpenAiToken);
+            });
             services.AddSingleton<BotService>(sp => new BotService(
                 sp.GetRequiredService<IOptions<BotConfigurationOptions>>(),
                 sp.GetRequiredService<IHttpClientFactory>(),
-                sp.GetRequiredService<IGroupAccess>(), sp.GetRequiredService<ILogger<BotService>>()));
+                sp.GetRequiredService<IGroupAccess>(), 
+                sp.GetRequiredService<ILogger<BotService>>(),
+                sp.GetRequiredService<ITextProcessingService>()));
 
             services.AddLogging(builder =>
             {

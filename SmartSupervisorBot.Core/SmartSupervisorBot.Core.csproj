@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SmartSupervisorBot.DataAccess\SmartSupervisorBot.DataAccess.csproj" />
+    <ProjectReference Include="..\SmartSupervisorBot.TextProcessing\SmartSupervisorBot.TextProcessing.csproj" />
     <ProjectReference Include="..\SmartSupervisorBot.Utilities\SmartSupervisorBot.Utilities.csproj" />
   </ItemGroup>
 

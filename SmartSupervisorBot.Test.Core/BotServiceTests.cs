@@ -33,7 +33,11 @@ namespace SmartSupervisorBot.Test.Core
             };
             mockOptions.Setup(o => o.Value).Returns(mockBotConfig);
 
-            var service = new BotService(mockOptions.Object, mockHttpClientFactory.Object, mockGroupAccess.Object, mockLogger.Object);
+            var service = new BotService(
+                mockOptions.Object, 
+                mockHttpClientFactory.Object, 
+                mockGroupAccess.Object, 
+                mockLogger.Object);
 
             // Act
             service.StartReceivingMessages();
