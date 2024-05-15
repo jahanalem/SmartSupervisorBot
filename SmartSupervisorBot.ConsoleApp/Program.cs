@@ -71,6 +71,7 @@ namespace SmartSupervisorBot.ConsoleApp
             services.AddLogging(builder =>
             {
                 builder.ClearProviders();
+                builder.AddSerilog();
                 //builder.AddDebug();
                 //builder.AddConsole();
             });
