@@ -1,11 +1,7 @@
-﻿using OpenAI_API.Completions;
-using Rystem.OpenAi;
+﻿using Rystem.OpenAi;
 using Rystem.OpenAi.Chat;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using SmartSupervisorBot.Model;
+using SmartSupervisorBot.TextProcessing.Model;
 
 namespace SmartSupervisorBot.TextProcessing
 {
@@ -19,17 +15,27 @@ namespace SmartSupervisorBot.TextProcessing
         }
 
 
-        public async Task<string> ProcessTextAsync(string prompt, string model, int maxTokens, double temperature)
+        public async Task<TextProcessingResult> ProcessTextAsync(TextProcessingRequest request)
         {
-            var chatRequestBuilder = _openAiChat.RequestWithUserMessage(prompt)
-                .WithModel(model).WithTemperature(temperature).SetMaxTokens(maxTokens);
+            try
+            {
+                var chatRequestBuilder = _openAiChat.RequestWithUserMessage(request.Prompt)
+                                                    .WithModel(ChatModelType.Gpt35Turbo)
+                                                    .WithTemperature(request.Temperature)
+                                                    .SetMaxTokens(request.MaxTokens);
 
-            var chatResponse = await chatRequestBuilder.ExecuteAsync();
+                var chatResponse = await chatRequestBuilder.ExecuteAsync();
+                var result = chatResponse.Choices.FirstOrDefault()?.Message.Content.ToString();
 
-            var result = chatResponse.Choices.FirstOrDefault()?.Message.Content.ToString();
+                var refineResponse = result;
 
-
-            return result;
+                return new TextProcessingResult(refineResponse, 0, true);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error processing text with OpenAi Chat.");
+                throw;
+            }
         }
     }
 }

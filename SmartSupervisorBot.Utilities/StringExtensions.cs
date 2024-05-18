@@ -28,5 +28,19 @@
 
             return count;
         }
+
+        public static int CountTokens(this string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return 0;
+            }
+
+            // Tokenization based on words and common punctuation marks
+            char[] delimiters = new char[] { ' ', '\r', '\n', '.', ',', '!', '?', ';', ':', '-', '(', ')', '[', ']', '{', '}', '"', '\'' };
+            string[] tokens = input.Split(delimiters, StringSplitOptions.RemoveEmptyEntries);
+
+            return tokens.Length;
+        }
     }
 }

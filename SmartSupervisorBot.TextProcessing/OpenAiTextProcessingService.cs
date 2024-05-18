@@ -1,33 +1,51 @@
 ﻿using OpenAI_API;
 using OpenAI_API.Completions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using SmartSupervisorBot.DataAccess;
+using SmartSupervisorBot.Model;
+using SmartSupervisorBot.TextProcessing.Model;
+using SmartSupervisorBot.Utilities;
 
 namespace SmartSupervisorBot.TextProcessing
 {
     public class OpenAiTextProcessingService : ITextProcessingService
     {
         private readonly OpenAIAPI _api;
+        private readonly IGroupAccess _groupAccess;
 
-        public OpenAiTextProcessingService(string apiKey)
+        public OpenAiTextProcessingService(string apiKey, IGroupAccess groupAccess)
         {
             _api = new OpenAIAPI(apiKey);
+            _groupAccess = groupAccess;
         }
-        public async Task<string> ProcessTextAsync(string prompt, string model, int maxTokens, double temperature)
+
+        public async Task<TextProcessingResult> ProcessTextAsync(TextProcessingRequest request)
         {
+            var tokenCostData = TokenUtility.CalculateTokenAndCost(request.Prompt, request.MaxTokens, request.Model);
+
+            var groupInfo = await _groupAccess.GetGroupInfoAsync(request.GroupId);
+            var newCreditUsed = groupInfo.CreditUsed + tokenCostData.EstimatedCost;
+
+            if (newCreditUsed > groupInfo.CreditPurchased)
+            {
+                return new TextProcessingResult(null, tokenCostData.EstimatedCost, false, "Your credit has been used up. Please purchase more credit to continue.");
+            }
+
+            groupInfo.CreditUsed = newCreditUsed;
+            await _groupAccess.UpdateGroupInfoAsync(request.GroupId, groupInfo);
+
+
             var completionRequest = new CompletionRequest
             {
-                Prompt = prompt,
-                Model = model,
-                MaxTokens = maxTokens,
-                Temperature = temperature
+                Prompt = request.Prompt,
+                Model = request.Model,
+                MaxTokens = request.MaxTokens,
+                Temperature = request.Temperature
             };
 
             var response = await _api.Completions.CreateCompletionAsync(completionRequest);
-            return response.ToString().Replace("\n", "").Replace("\r", "").Trim('"', ' ');
+            var refineResponse = response.ToString().Replace("\n", "").Replace("\r", "").Trim('"', ' ');
+
+            return new TextProcessingResult(refineResponse, tokenCostData.EstimatedCost, true);
         }
     }
 }

@@ -1,7 +1,10 @@
-﻿namespace SmartSupervisorBot.TextProcessing
+﻿using SmartSupervisorBot.Model;
+using SmartSupervisorBot.TextProcessing.Model;
+
+namespace SmartSupervisorBot.TextProcessing
 {
     public interface ITextProcessingService
     {
-        Task<string> ProcessTextAsync(string prompt, string model, int maxTokens, double temperature);
+        Task<TextProcessingResult> ProcessTextAsync(TextProcessingRequest request);
     }
 }

@@ -2,7 +2,6 @@
 using Newtonsoft.Json;
 using SmartSupervisorBot.Model;
 using StackExchange.Redis;
-using System.Text.Json.Serialization;
 
 
 namespace SmartSupervisorBot.DataAccess
@@ -161,6 +160,25 @@ namespace SmartSupervisorBot.DataAccess
             }
 
             return groupInfos;
+        }
+
+        public async Task<GroupInfo> GetGroupInfoAsync(string groupId)
+        {
+            var groupInfoString = await _db.StringGetAsync(groupId);
+            return JsonConvert.DeserializeObject<GroupInfo>(groupInfoString);
+        }
+
+        public async Task UpdateGroupInfoAsync(string groupId, GroupInfo groupInfo)
+        {
+            var groupInfoString = JsonConvert.SerializeObject(groupInfo);
+            await _db.StringSetAsync(groupId, groupInfoString);
+        }
+
+        public async Task AddCreditToGroupAsync(string groupId, decimal creditAmount)
+        {
+            var groupInfo = await GetGroupInfoAsync(groupId);
+            groupInfo.CreditPurchased += creditAmount;
+            await UpdateGroupInfoAsync(groupId, groupInfo);
         }
     }
 }

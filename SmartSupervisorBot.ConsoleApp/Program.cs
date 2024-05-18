@@ -56,15 +56,18 @@ namespace SmartSupervisorBot.ConsoleApp
             services.Configure<BotConfigurationOptions>(configuration.GetSection("BotConfiguration"));
             services.AddSingleton<IConfiguration>(configuration);
             services.AddHttpClient();
+
             services.AddSingleton<ITextProcessingService>(provider =>
             {
                 var options = provider.GetRequiredService<IOptions<BotConfigurationOptions>>();
-                return new OpenAiTextProcessingService(options.Value.BotSettings.OpenAiToken);
+                var groupAccess = provider.GetRequiredService<IGroupAccess>();
+                return new OpenAiTextProcessingService(options.Value.BotSettings.OpenAiToken, groupAccess);
             });
+
             services.AddSingleton<BotService>(sp => new BotService(
                 sp.GetRequiredService<IOptions<BotConfigurationOptions>>(),
                 sp.GetRequiredService<IHttpClientFactory>(),
-                sp.GetRequiredService<IGroupAccess>(), 
+                sp.GetRequiredService<IGroupAccess>(),
                 sp.GetRequiredService<ILogger<BotService>>(),
                 sp.GetRequiredService<ITextProcessingService>()));
 
@@ -84,7 +87,7 @@ namespace SmartSupervisorBot.ConsoleApp
             while (true)
             {
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("Enter command (active, setlang, add, delete, list, exit):");
+                Console.WriteLine("Enter command (active, setlang, add, delete, addcredit, list, exit):");
                 Console.ForegroundColor = ConsoleColor.White;
                 var command = Console.ReadLine();
                 switch (command.ToLower())
@@ -103,6 +106,9 @@ namespace SmartSupervisorBot.ConsoleApp
                         break;
                     case "list":
                         await ExecuteListGroups(botService);
+                        break;
+                    case "addcredit":
+                        await ExecuteAddCreditToGroup(botService);
                         break;
                     case "exit":
                         Console.ForegroundColor = ConsoleColor.DarkRed;
@@ -231,16 +237,53 @@ namespace SmartSupervisorBot.ConsoleApp
             var groups = await botService.ListGroups();
             Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine("List of groups:");
+            Console.ResetColor();
+
+            Console.WriteLine("{0,-15} {1,-10} {2,-15} {3,-30} {4,-30} {5,-30} {6,-25}",
+                              "Group ID", "Active", "Language", "Credit Purchased", "Credit Used", "Group Name", "Created Date");
+
             foreach (var group in groups)
             {
-                Console.WriteLine(
-                    $"Id: {group.GroupId}, " +
-                    $"Name: {group.GroupInfo.GroupName}, " +
-                    $"Language: {group.GroupInfo.Language}, " +
-                    $"Active: {group.GroupInfo.IsActive}, " +
-                    $"Created Date: {group.GroupInfo.CreatedDate.ToLocalTime()}");
+                Console.WriteLine("{0,-15} {1,-10} {2,-15} {3,-30} {4,-30} {5,-30} {6,-25}",
+                                  group.GroupId,
+                                  group.GroupInfo.IsActive ? "Yes" : "No",
+                                  group.GroupInfo.Language,
+                                  $"${group.GroupInfo.CreditPurchased:F6}",
+                                  $"${group.GroupInfo.CreditUsed:F6}",
+                                  group.GroupInfo.GroupName,
+                                  group.GroupInfo.CreatedDate.ToLocalTime());
             }
-            Console.ResetColor();
+        }
+
+        static async Task ExecuteAddCreditToGroup(BotService botService)
+        {
+            Console.WriteLine("Enter the group ID:");
+            var groupId = Console.ReadLine();
+
+            Console.WriteLine("Enter the amount of credit to add:");
+            if (!decimal.TryParse(Console.ReadLine(), out var creditAmount))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Invalid credit amount.");
+                Console.ResetColor();
+                return;
+            }
+
+            try
+            {
+                await botService.AddCreditToGroupAsync(groupId.Trim(), creditAmount);
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("Credit added successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Failed to add credit: {ex.Message}");
+            }
+            finally
+            {
+                Console.ResetColor();
+            }
         }
     }
 }

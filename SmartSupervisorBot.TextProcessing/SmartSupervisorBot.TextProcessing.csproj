@@ -7,8 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="OpenAI" Version="1.11.0" />
     <PackageReference Include="Rystem.OpenAi" Version="3.3.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SmartSupervisorBot.DataAccess\SmartSupervisorBot.DataAccess.csproj" />
+    <ProjectReference Include="..\SmartSupervisorBot.Utilities\SmartSupervisorBot.Utilities.csproj" />
   </ItemGroup>
 
 </Project>

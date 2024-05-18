@@ -4,14 +4,14 @@ using Newtonsoft.Json;
 using SmartSupervisorBot.Core.Settings;
 using SmartSupervisorBot.DataAccess;
 using SmartSupervisorBot.Model;
+using SmartSupervisorBot.TextProcessing;
+using SmartSupervisorBot.TextProcessing.Model;
+using SmartSupervisorBot.Utilities;
 using System.Text;
-using System.Text.RegularExpressions;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using SmartSupervisorBot.Utilities;
-using SmartSupervisorBot.TextProcessing;
 
 namespace SmartSupervisorBot.Core
 {
@@ -130,6 +130,11 @@ namespace SmartSupervisorBot.Core
             _httpClientFactory?.CreateClient().Dispose();
         }
 
+        public async Task AddCreditToGroupAsync(string groupId, decimal creditAmount)
+        {
+            await _groupAccess.AddCreditToGroupAsync(groupId, creditAmount);
+        }
+
         private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Received update of type {UpdateType}", update.Type);
@@ -189,9 +194,15 @@ namespace SmartSupervisorBot.Core
 
             var result = await BuildTextProcessingRequestAsync(messageText, groupId);
 
-            if (result != messageText)
+            if (!result.IsCreditSufficient)
             {
-                await SendProcessedTextAsync(botClient, update.Message, result, cancellationToken);
+                await botClient.SendTextMessageAsync(update.Message.Chat.Id, result.UserMessage, cancellationToken: cancellationToken);
+                return;
+            }
+
+            if (result.Result != messageText)
+            {
+                await SendProcessedTextAsync(botClient, update.Message, result.Result, cancellationToken);
             }
             else
             {
@@ -280,7 +291,7 @@ namespace SmartSupervisorBot.Core
             }
         }
 
-        private async Task<string> BuildTextProcessingRequestAsync(string messageText, string groupId)
+        private async Task<TextProcessingResult> BuildTextProcessingRequestAsync(string messageText, string groupId)
         {
             var settings = _botConfigurationOptions.UnifiedTextSettings;
             var languageGroup = await _groupAccess.GetGroupLanguageAsync(groupId);
@@ -289,9 +300,14 @@ namespace SmartSupervisorBot.Core
             string prompt = settings.Prompt.Replace("{language}", languageToUse);
             string promptWithMessage = $"{prompt} '{messageText}'";
 
-            var response = await _textProcessingService.ProcessTextAsync(promptWithMessage, settings.Model, settings.MaxTokens, settings.Temperature);
+            var request = new TextProcessingRequest(
+                promptWithMessage,
+                settings.Model,
+                settings.MaxTokens,
+                settings.Temperature,
+                groupId);
 
-            return response;
+            return await _textProcessingService.ProcessTextAsync(request);
         }
 
         private string FormatPrompt(string language, string currentPrompt)
@@ -335,9 +351,10 @@ namespace SmartSupervisorBot.Core
             var model = _botConfigurationOptions.LanguageDetectionSettings.Model;
             var maxTokens = _botConfigurationOptions.LanguageDetectionSettings.MaxTokens;
             var temperature = _botConfigurationOptions.LanguageDetectionSettings.Temperature;
-            var result = await _textProcessingService.ProcessTextAsync(prompt, model, maxTokens, temperature);
+            var request = new TextProcessingRequest(prompt, model, maxTokens, temperature, "");
+            var result = await _textProcessingService.ProcessTextAsync(request);
 
-            return result;
+            return result.Result;
         }
     }
 }

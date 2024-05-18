@@ -1,5 +1,4 @@
 ﻿using SmartSupervisorBot.Model;
-using System.Text.RegularExpressions;
 
 namespace SmartSupervisorBot.DataAccess
 {
@@ -15,5 +14,8 @@ namespace SmartSupervisorBot.DataAccess
         Task<List<string>> ListAllGroupNamesAsync();
         Task<List<(string GroupId, GroupInfo GroupInfo)>> ListAllGroupsWithLanguagesAsync();
         Task UpdateGroupNameAsync(string groupId, string newGroupName);
+        Task<GroupInfo> GetGroupInfoAsync(string groupId);
+        Task UpdateGroupInfoAsync(string groupId, GroupInfo groupInfo);
+        Task AddCreditToGroupAsync(string groupId, decimal creditAmount);
     }
 }

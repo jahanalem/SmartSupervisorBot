@@ -11,6 +11,7 @@ namespace SmartSupervisorBot.Core
         Task<bool> EditLanguage(string groupName, string language);
         Task<List<(string GroupId, GroupInfo GroupInfo)>> ListGroups();
         Task<bool> ToggleGroupActive(string groupId, bool isActive);
+        Task AddCreditToGroupAsync(string groupId, decimal creditAmount);
         void Dispose();
     }
 }
