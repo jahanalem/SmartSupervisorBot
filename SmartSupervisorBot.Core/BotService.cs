@@ -40,8 +40,6 @@ namespace SmartSupervisorBot.Core
             _botClient = new TelegramBotClient(_botToken, _httpClientFactory.CreateClient());
             _logger = logger;
             _groupAccess = groupAccess;
-
-            _logger.LogInformation("BotService initialized.");
         }
 
 
@@ -61,11 +59,7 @@ namespace SmartSupervisorBot.Core
                 AllowedUpdates = updates
             };
 
-            _logger.LogInformation("Starting message reception...");
-
             _botClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, receiverOptions, _cts.Token);
-
-            _logger.LogInformation("Message reception started successfully.");
         }
 
         public async Task AddGroup(long groupId, GroupInfo groupInfo)
@@ -137,8 +131,6 @@ namespace SmartSupervisorBot.Core
 
         private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Received update of type {UpdateType}", update.Type);
-
             try
             {
                 if (update.Type == UpdateType.Message)
@@ -146,7 +138,6 @@ namespace SmartSupervisorBot.Core
                     switch (update.Message.Type)
                     {
                         case MessageType.Text:
-                            _logger.LogInformation("Received text message: {MessageText}", update.Message.Text);
                             await ProcessTextMessage(update, botClient, cancellationToken);
                             break;
                         case MessageType.ChatTitleChanged:
@@ -171,13 +162,11 @@ namespace SmartSupervisorBot.Core
 
             if (!(messageText.EndsWith("..") || messageText.EndsWith("。。")))
             {
-                _logger.LogInformation("Message does not end with .. or 。。");
                 return;
             }
             var countWords = messageText.CountWords();
             if (!(countWords >= 1 && countWords <= 80))
             {
-                _logger.LogInformation("Message word count is not within the expected range");
                 return;
             }
 

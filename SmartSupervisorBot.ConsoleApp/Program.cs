@@ -239,18 +239,18 @@ namespace SmartSupervisorBot.ConsoleApp
             Console.WriteLine("List of groups:");
             Console.ResetColor();
 
-            Console.WriteLine("{0,-15} {1,-10} {2,-15} {3,-30} {4,-30} {5,-30} {6,-25}",
-                              "Group ID", "Active", "Language", "Credit Purchased", "Credit Used", "Group Name", "Created Date");
+            Console.WriteLine("{0,-15} {1,-30} {2,-10} {3,-15} {4,-30} {6,-30} {6,-25}",
+                              "Group ID", "Group Name", "Active", "Language", "Credit Purchased", "Credit Used", "Created Date");
 
             foreach (var group in groups)
             {
-                Console.WriteLine("{0,-15} {1,-10} {2,-15} {3,-30} {4,-30} {5,-30} {6,-25}",
+                Console.WriteLine("{0,-15} {1,-30} {2,-10} {3,-15} {4,-30} {5,-30} {6,-25}",
                                   group.GroupId,
+                                  group.GroupInfo.GroupName,
                                   group.GroupInfo.IsActive ? "Yes" : "No",
                                   group.GroupInfo.Language,
                                   $"${group.GroupInfo.CreditPurchased:F6}",
                                   $"${group.GroupInfo.CreditUsed:F6}",
-                                  group.GroupInfo.GroupName,
                                   group.GroupInfo.CreatedDate.ToLocalTime());
             }
         }
