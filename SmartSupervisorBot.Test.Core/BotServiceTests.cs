@@ -5,6 +5,7 @@ using SmartSupervisorBot.Core;
 using SmartSupervisorBot.Core.Settings;
 using SmartSupervisorBot.DataAccess;
 using SmartSupervisorBot.Model;
+using SmartSupervisorBot.TextProcessing;
 
 namespace SmartSupervisorBot.Test.Core
 {
@@ -25,6 +26,7 @@ namespace SmartSupervisorBot.Test.Core
 
             var mockHttpClientFactory = new Mock<IHttpClientFactory>();
             var mockGroupAccess = new Mock<IGroupAccess>();
+            var mockTextProcessingService = new Mock<ITextProcessingService>();
             var mockOptions = new Mock<IOptions<BotConfigurationOptions>>();
             var mockBotConfig = new BotConfigurationOptions
             {
@@ -34,10 +36,11 @@ namespace SmartSupervisorBot.Test.Core
             mockOptions.Setup(o => o.Value).Returns(mockBotConfig);
 
             var service = new BotService(
-                mockOptions.Object, 
-                mockHttpClientFactory.Object, 
-                mockGroupAccess.Object, 
-                mockLogger.Object);
+                mockOptions.Object,
+                mockHttpClientFactory.Object,
+                mockGroupAccess.Object,
+                mockLogger.Object,
+                mockTextProcessingService.Object);
 
             // Act
             service.StartReceivingMessages();
@@ -50,11 +53,12 @@ namespace SmartSupervisorBot.Test.Core
         {
             var mockLogger = new Mock<ILogger<BotService>>();
             var mockHttpClientFactory = new Mock<IHttpClientFactory>();
+            var mockTextProcessingService = new Mock<ITextProcessingService>();
             var mockOptions = new Mock<IOptions<BotConfigurationOptions>>();
             var config = new BotConfigurationOptions { BotSettings = new BotSettings { BotToken = "token", OpenAiToken = "token" } };
             mockOptions.Setup(o => o.Value).Returns(config);
 
-            return new BotService(mockOptions.Object, mockHttpClientFactory.Object, groupAccess, mockLogger.Object);
+            return new BotService(mockOptions.Object, mockHttpClientFactory.Object, groupAccess, mockLogger.Object, mockTextProcessingService.Object);
         }
 
         #region AddGroup Tests
