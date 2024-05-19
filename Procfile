@@ -1,1 +1,1 @@
-web: dotnet SmartSupervisorBot.ConsoleApp.dll 
+worker: dotnet SmartSupervisorBot.ConsoleApp.dll
