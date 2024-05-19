@@ -1,1 +1,1 @@
-worker: dotnet SmartSupervisorBot.ConsoleApp/SmartSupervisorBot.ConsoleApp.dll
+worker: dotnet SmartSupervisorBot.ConsoleApp/bin/Release/net8.0/SmartSupervisorBot.ConsoleApp.dll
