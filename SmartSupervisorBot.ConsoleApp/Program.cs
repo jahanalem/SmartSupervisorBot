@@ -76,7 +76,14 @@ namespace SmartSupervisorBot.ConsoleApp
             {
                 var options = provider.GetRequiredService<IOptions<BotConfigurationOptions>>();
                 var groupAccess = provider.GetRequiredService<IGroupAccess>();
-                return new OpenAiTextProcessingService(options.Value.BotSettings.OpenAiToken, groupAccess);
+                if (options.Value.OpenAiModel == "gpt-4o-mini")
+                {
+                    return new OpenAiChatProcessingService(options.Value.BotSettings.OpenAiToken, groupAccess);
+                }
+                else
+                {
+                    return new OpenAiCompletionsService(options.Value.BotSettings.OpenAiToken, groupAccess);
+                }
             });
 
             services.AddSingleton<BotService>(sp => new BotService(

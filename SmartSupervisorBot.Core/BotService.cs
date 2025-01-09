@@ -17,15 +17,14 @@ namespace SmartSupervisorBot.Core
 {
     public class BotService : IBotService, IDisposable
     {
-        private readonly ILogger<BotService> _logger;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly string _botToken;
-        private readonly ITextProcessingService _textProcessingService;
-        private readonly CancellationTokenSource _cts;
-        private TelegramBotClient _botClient;
         private readonly BotConfigurationOptions _botConfigurationOptions;
-
+        private readonly ITextProcessingService _textProcessingService;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly CancellationTokenSource _cts;
+        private readonly TelegramBotClient _botClient;
+        private readonly ILogger<BotService> _logger;
         private readonly IGroupAccess _groupAccess;
+        private readonly string _botToken;
 
         public BotService(IOptions<BotConfigurationOptions> botConfigurationOptions,
             IHttpClientFactory httpClientFactory,
@@ -140,7 +139,7 @@ namespace SmartSupervisorBot.Core
                         case MessageType.Text:
                             await ProcessTextMessage(update, botClient, cancellationToken);
                             break;
-                        case MessageType.ChatTitleChanged:
+                        case MessageType.NewChatTitle:
                             await UpdateGroupNameAsync(update);
                             break;
                     }
@@ -170,7 +169,7 @@ namespace SmartSupervisorBot.Core
                 return;
             }
 
-            messageText = messageText.Remove(messageText.Length - 1);
+            messageText = messageText.Remove(messageText.Length - 2);
 
             bool isValidGroup = await IsValidGroup(update.Message);
             if (!isValidGroup)
@@ -183,9 +182,9 @@ namespace SmartSupervisorBot.Core
 
             var result = await BuildTextProcessingRequestAsync(messageText, groupId);
 
-            if (!result.IsCreditSufficient)
+            if (!result.groupIsActive)
             {
-                await botClient.SendTextMessageAsync(update.Message.Chat.Id, result.UserMessage, cancellationToken: cancellationToken);
+                await botClient.SendMessage(update.Message.Chat.Id, result.MessageToUser, parseMode: ParseMode.Html, cancellationToken: cancellationToken);
                 return;
             }
 
@@ -247,13 +246,13 @@ namespace SmartSupervisorBot.Core
             var chatId = update.Message?.Chat.Id ?? 0;
             var messageId = update.Message?.MessageId ?? 0;
 
-            var correctedText = $"<i> Dieser Roboter ist nur für bestimmte Gruppen aktiv. Bitte wenden Sie sich an den Bot-Hersteller: @Roohi_C </i>";
+            var correctedText = $"<i> This robot is only active for certain groups. Please contact the bot manufacturer: @Roohi_C </i>";
 
-            await botClient.SendTextMessageAsync(
+            await botClient.SendMessage(
                 chatId: chatId,
                 text: correctedText,
-                replyToMessageId: messageId,
                 parseMode: ParseMode.Html,
+                replyParameters: new ReplyParameters { MessageId = messageId },
                 cancellationToken: cancellationToken);
         }
 
@@ -288,13 +287,9 @@ namespace SmartSupervisorBot.Core
 
             string prompt = settings.Prompt.Replace("{language}", languageToUse);
             string promptWithMessage = $"{prompt} '{messageText}'";
-
-            var request = new TextProcessingRequest(
-                promptWithMessage,
-                settings.Model,
-                settings.MaxTokens,
-                settings.Temperature,
-                groupId);
+            var openAiModel = _botConfigurationOptions.OpenAiModel;
+            var message = messageText.Trim();
+            var request = new TextProcessingRequest(prompt, promptWithMessage, openAiModel, settings.MaxTokens, settings.Temperature, groupId, message);
 
             return await _textProcessingService.ProcessTextAsync(request);
         }
@@ -311,10 +306,10 @@ namespace SmartSupervisorBot.Core
             var writer = !string.IsNullOrEmpty(message?.From?.Username) ? $"@{message.From.Username}" : $"{message?.From?.FirstName} {message.From?.LastName}";
             var correctedText = $"<i>{writer}</i> 🗨️: <blockquote><i>{response}</i></blockquote>";
 
-            await botClient.SendTextMessageAsync(
+            await botClient.SendMessage(
                 chatId: chatId,
                 text: correctedText,
-                replyToMessageId: messageId,
+                 replyParameters: new ReplyParameters { MessageId = messageId },
                 parseMode: ParseMode.Html,
                 cancellationToken: cancellationToken);
         }
@@ -332,18 +327,6 @@ namespace SmartSupervisorBot.Core
             _logger.LogError($"Ein anderer Fehler ist aufgetreten. Bitte überprüfen Sie die Details.{exception.StackTrace}");
 
             return Task.CompletedTask;
-        }
-
-        private async Task<string> DetectLanguageAsync(string text)
-        {
-            var prompt = $"{_botConfigurationOptions.LanguageDetectionSettings.Prompt} '{text}'";
-            var model = _botConfigurationOptions.LanguageDetectionSettings.Model;
-            var maxTokens = _botConfigurationOptions.LanguageDetectionSettings.MaxTokens;
-            var temperature = _botConfigurationOptions.LanguageDetectionSettings.Temperature;
-            var request = new TextProcessingRequest(prompt, model, maxTokens, temperature, "");
-            var result = await _textProcessingService.ProcessTextAsync(request);
-
-            return result.Result;
         }
     }
 }

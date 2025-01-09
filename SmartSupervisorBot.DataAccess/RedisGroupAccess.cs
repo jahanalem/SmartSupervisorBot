@@ -138,7 +138,7 @@ namespace SmartSupervisorBot.DataAccess
             return await _db.KeyDeleteAsync(groupId);
         }
 
-        public async Task<List<string>> ListAllGroupNamesAsync()
+        public List<string> ListAllGroupNames()
         {
             var server = _redis.GetServer(_redis.GetEndPoints().First());
             var keys = server.Keys(pattern: "*").Select(key => key.ToString());
@@ -155,7 +155,7 @@ namespace SmartSupervisorBot.DataAccess
             foreach (var key in keys)
             {
                 var groupInfoJson = await _db.StringGetAsync(key);
-                var groupInfo = JsonConvert.DeserializeObject<GroupInfo>(groupInfoJson);
+                var groupInfo = JsonConvert.DeserializeObject<GroupInfo>(groupInfoJson) ?? new GroupInfo();
                 groupInfos.Add((key.ToString(), groupInfo));
             }
 

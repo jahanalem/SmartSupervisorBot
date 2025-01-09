@@ -1,8 +1,4 @@
 ﻿namespace SmartSupervisorBot.TextProcessing.Model
 {
-    public record TextProcessingResult(
-        string Result,
-        decimal EstimatedCost,
-        bool IsCreditSufficient,
-        string UserMessage = null);
+    public record TextProcessingResult(string Result, bool groupIsActive, string MessageToUser = null);
 }

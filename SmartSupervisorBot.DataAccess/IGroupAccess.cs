@@ -11,7 +11,7 @@ namespace SmartSupervisorBot.DataAccess
         Task<bool> SetGroupLanguageAsync(string groupId, string newLanguage);
         Task<bool> RemoveGroupAsync(string groupId);
         Task<bool> GroupExistsAsync(string groupId);
-        Task<List<string>> ListAllGroupNamesAsync();
+        List<string> ListAllGroupNames();
         Task<List<(string GroupId, GroupInfo GroupInfo)>> ListAllGroupsWithLanguagesAsync();
         Task UpdateGroupNameAsync(string groupId, string newGroupName);
         Task<GroupInfo> GetGroupInfoAsync(string groupId);
