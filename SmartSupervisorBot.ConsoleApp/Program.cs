@@ -49,21 +49,7 @@ namespace SmartSupervisorBot.ConsoleApp
                 .AddJsonFile($"appsettings.{environmentName}.json", optional: true)
                 .AddEnvironmentVariables();
 
-
-            // Decode Base64 configuration if available
-            string base64Config = Environment.GetEnvironmentVariable("APPSETTINGS_BASE64");
-            if (!string.IsNullOrEmpty(base64Config))
-            {
-                byte[] jsonBytes = Convert.FromBase64String(base64Config);
-                string jsonString = System.Text.Encoding.UTF8.GetString(jsonBytes);
-
-                // Load the JSON configuration from the decoded string
-                var memoryStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(jsonString));
-                builder.AddJsonStream(memoryStream);
-            }
-
             return builder.Build();
-
         }
 
         static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
