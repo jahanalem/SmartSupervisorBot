@@ -281,17 +281,26 @@ namespace SmartSupervisorBot.Core
 
         private async Task<TextProcessingResult> BuildTextProcessingRequestAsync(string messageText, string groupId)
         {
-            var settings = _botConfigurationOptions.UnifiedTextSettings;
-            var languageGroup = await _groupAccess.GetGroupLanguageAsync(groupId);
-            var languageToUse = languageGroup ?? _botConfigurationOptions.TranslateTheTextTo;
+            try
+            {
+                var settings = _botConfigurationOptions.UnifiedTextSettings;
+                var languageGroup = await _groupAccess.GetGroupLanguageAsync(groupId);
+                var languageToUse = languageGroup ?? _botConfigurationOptions.TranslateTheTextTo;
 
-            string prompt = settings.Prompt.Replace("{language}", languageToUse);
-            string promptWithMessage = $"{prompt} '{messageText}'";
-            var openAiModel = _botConfigurationOptions.OpenAiModel;
-            var message = messageText.Trim();
-            var request = new TextProcessingRequest(prompt, promptWithMessage, openAiModel, settings.MaxTokens, settings.Temperature, groupId, message);
+                string prompt = settings.Prompt.Replace("{language}", languageToUse);
+                string promptWithMessage = $"{prompt} '{messageText}'";
+                var openAiModel = _botConfigurationOptions.OpenAiModel;
+                var message = messageText.Trim();
+                var request = new TextProcessingRequest(prompt, promptWithMessage, openAiModel, settings.MaxTokens, settings.Temperature, groupId, message);
 
-            return await _textProcessingService.ProcessTextAsync(request);
+                return await _textProcessingService.ProcessTextAsync(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"An error occurred while processing the text: {ex.Message}");
+                return new TextProcessingResult(null, false, "An error occurred while processing the text. Please try again later.");
+            }
+           
         }
 
         private string FormatPrompt(string language, string currentPrompt)
