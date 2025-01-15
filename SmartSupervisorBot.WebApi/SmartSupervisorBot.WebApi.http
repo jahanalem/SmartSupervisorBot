@@ -1,0 +1,16 @@
+@SmartSupervisorBot.WebApi_HostAddress = http://localhost:5078
+
+GET {{SmartSupervisorBot.WebApi_HostAddress}}/groups
+Accept: application/json
+
+###
+
+POST {{SmartSupervisorBot.WebApi_HostAddress}}/process
+Content-Type: application/json
+
+{
+  "groupId": "-1002099086817",
+  "message": "Hallo Bot!.."
+}
+
+###

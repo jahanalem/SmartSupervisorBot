@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Headers;
-using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 namespace SmartSupervisorBot.TextProcessing
 {
@@ -30,7 +31,10 @@ namespace SmartSupervisorBot.TextProcessing
                 throw new Exception(await HandleErrorResponse(response));
             }
 
-            return await response.Content.ReadFromJsonAsync<T>();
+            var stream = await response.Content.ReadAsStreamAsync();
+            var options = OpenAiJsonSerializerContext.Default.GetTypeInfo(typeof(T));
+
+            return (T)JsonSerializer.Deserialize(stream, (JsonTypeInfo<T>)options)!;
         }
     }
 }

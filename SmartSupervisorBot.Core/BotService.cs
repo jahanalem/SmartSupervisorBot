@@ -32,15 +32,14 @@ namespace SmartSupervisorBot.Core
             ITextProcessingService textProcessingService)
         {
             _botConfigurationOptions = botConfigurationOptions.Value;
-            _httpClientFactory = httpClientFactory;
             _botToken = _botConfigurationOptions.BotSettings.BotToken;
             _textProcessingService = textProcessingService;
+            _httpClientFactory = httpClientFactory;
             _cts = new CancellationTokenSource();
-            _botClient = new TelegramBotClient(_botToken, _httpClientFactory.CreateClient());
-            _logger = logger;
             _groupAccess = groupAccess;
+            _logger = logger;
+            _botClient = new TelegramBotClient(_botToken, _httpClientFactory.CreateClient());
         }
-
 
         public static UpdateType[] ConvertStringToUpdateType(string[] updateStrings)
         {
@@ -300,7 +299,6 @@ namespace SmartSupervisorBot.Core
                 _logger.LogError($"An error occurred while processing the text: {ex.Message}");
                 return new TextProcessingResult(null, false, "An error occurred while processing the text. Please try again later.");
             }
-           
         }
 
         private string FormatPrompt(string language, string currentPrompt)

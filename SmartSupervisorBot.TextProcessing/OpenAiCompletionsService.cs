@@ -1,9 +1,9 @@
 ﻿using SmartSupervisorBot.DataAccess;
 using SmartSupervisorBot.Model;
+using SmartSupervisorBot.Model.OpenAI.Completions;
 using SmartSupervisorBot.TextProcessing.Model;
 using SmartSupervisorBot.Utilities;
 using System.Net.Http.Json;
-using System.Text.Json.Serialization;
 
 namespace SmartSupervisorBot.TextProcessing
 {
@@ -18,78 +18,74 @@ namespace SmartSupervisorBot.TextProcessing
 
         public async Task<TextProcessingResult> ProcessTextAsync(TextProcessingRequest request)
         {
-            // Calculate tokens/cost
-            var tokenCostData = TokenUtility.CalculateTokenAndCost(request.PromptWithMessage, request.MaxTokens, request.Model);
+            // Validate and update group credits
+            var groupInfo = await ValidateAndUpdateCreditsAsync(request);
+            if (!groupInfo.IsActive)
+            {
+                return new TextProcessingResult(null, false, "Your credit has been used up. Please purchase more credit to continue.");
+            }
 
-            // Check/update group credits
+            // Build the request body for the OpenAI /completions endpoint
+            var body = new CompletionRequest
+            {
+                Model = request.Model,
+                Prompt = request.PromptWithMessage,
+                MaxTokens = request.MaxTokens,
+                Temperature = request.Temperature
+            };
+
+            try
+            {
+                // Make the POST request to OpenAI /v1/completions
+                var completionResponse = await SendCompletionRequestAsync(body);
+
+                // Extract and refine the text response
+                var text = ExtractResponseText(completionResponse);
+
+                return new TextProcessingResult(text, groupInfo.IsActive);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Exception occurred in {nameof(ProcessTextAsync)}: {ex}");
+                throw;
+            }
+        }
+
+        private async Task<GroupInfo> ValidateAndUpdateCreditsAsync(TextProcessingRequest request)
+        {
+            var tokenCostData = TokenUtility.CalculateTokenAndCost(request.PromptWithMessage, request.MaxTokens, request.Model);
             var groupInfo = await _groupAccess.GetGroupInfoAsync(request.GroupId);
+
             var newCreditUsed = groupInfo.CreditUsed + tokenCostData.EstimatedCost;
 
             if (newCreditUsed > groupInfo.CreditPurchased)
             {
                 groupInfo.IsActive = false;
                 await _groupAccess.SetToggleGroupActive(request.GroupId, false);
-
-                return new TextProcessingResult(Result: null, false, MessageToUser: "Your credit has been used up. Please purchase more credit to continue.");
+                return groupInfo;
             }
 
             groupInfo.CreditUsed = newCreditUsed;
             await _groupAccess.UpdateGroupInfoAsync(request.GroupId, groupInfo);
 
-            // Build the request body for the OpenAI /completions endpoint
-            var body = new
-            {
-                model = request.Model,
-                prompt = request.PromptWithMessage,
-                max_tokens = request.MaxTokens,
-                temperature = request.Temperature
-            };
-
-            // Make the POST request to OpenAI /v1/completions
-            var httpResponse = await HttpClient.PostAsJsonAsync("completions", body);
-
-            // Parse the JSON response into CompletionResponse
-            var completionResponse = await DeserializeResponseAsync<CompletionResponse>(httpResponse);
-
-            // Extract the text from the first choice
-            var text = completionResponse?.Choices?.Count > 0 ? completionResponse.Choices[0].Text : string.Empty;
-
-            // Refine the response (remove newlines, quotes, etc.)
-            var refineResponse = text.Replace("\n", "").Replace("\r", "").Trim('"', ' ');
-
-            // Return your custom TextProcessingResult
-            return new TextProcessingResult(refineResponse, groupInfo.IsActive);
+            return groupInfo;
         }
-    }
 
-    // Minimal classes to parse the /completions JSON response
-    public class CompletionResponse
-    {
-        [JsonPropertyName("id")]
-        public string Id { get; set; }
+        private async Task<CompletionResponse> SendCompletionRequestAsync(CompletionRequest body)
+        {
+            var httpResponse = await HttpClient.PostAsJsonAsync(
+                "completions",
+                body,
+                OpenAiJsonSerializerContext.Default.CompletionRequest
+            );
 
-        [JsonPropertyName("object")]
-        public string Object { get; set; }
+            return await DeserializeResponseAsync<CompletionResponse>(httpResponse);
+        }
 
-        [JsonPropertyName("created")]
-        public int Created { get; set; }
-
-        [JsonPropertyName("model")]
-        public string Model { get; set; }
-
-        [JsonPropertyName("choices")]
-        public List<CompletionChoice> Choices { get; set; }
-    }
-
-    public class CompletionChoice
-    {
-        [JsonPropertyName("text")]
-        public string Text { get; set; }
-
-        [JsonPropertyName("index")]
-        public int Index { get; set; }
-
-        [JsonPropertyName("finish_reason")]
-        public string FinishReason { get; set; }
+        private static string ExtractResponseText(CompletionResponse completionResponse)
+        {
+            var text = completionResponse?.Choices?.FirstOrDefault()?.Text ?? string.Empty;
+            return text.Replace("\n", "").Replace("\r", "").Trim('"', ' ');
+        }
     }
 }
