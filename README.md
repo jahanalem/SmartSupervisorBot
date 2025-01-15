@@ -10,7 +10,7 @@ This bot aims to enhance communication by providing grammatical corrections and 
 - **Interactive**: Responds interactively in Telegram chats and can send reactions to corrected messages.
 
 ## Technologies
-- **.NET 8**
+- **.NET 9**
 - **Telegram Bot API**
 - **OpenAI API**
 
