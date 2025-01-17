@@ -1,4 +1,5 @@
 ﻿using SmartSupervisorBot.Model;
+using SmartSupervisorBot.Model.Dtos;
 using SmartSupervisorBot.Model.OpenAI.Chat.Completions;
 using SmartSupervisorBot.Model.OpenAI.Completions;
 using System.Text.Json.Serialization;
@@ -28,7 +29,12 @@ namespace SmartSupervisorBot.TextProcessing
     [JsonSerializable(typeof(CompletionRequest))]
     [JsonSerializable(typeof(CompletionResponse))]
     [JsonSerializable(typeof(CompletionChoice))]
-    internal partial class OpenAiJsonSerializerContext : JsonSerializerContext
+    [JsonSerializable(typeof(GroupInfo))]
+    [JsonSerializable(typeof(GroupInfoDto))]
+    [JsonSerializable(typeof(List<GroupInfoDto>))]
+    [JsonSerializable(typeof(SuccessResponse))]
+    [JsonSerializable(typeof(ErrorResponse))]
+    public partial class OpenAiJsonSerializerContext : JsonSerializerContext
     {
     }
 }

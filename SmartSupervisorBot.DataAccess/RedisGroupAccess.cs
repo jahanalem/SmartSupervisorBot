@@ -81,8 +81,8 @@ namespace SmartSupervisorBot.DataAccess
                     var updatedGroupInfoString = JsonConvert.SerializeObject(groupInfo);
                     await _db.StringSetAsync(groupId, updatedGroupInfoString);
                     _cache.Set($"groupLanguage-{groupId}", newLanguage, TimeSpan.FromDays(30));
-                    return true;
                 }
+                return true;
             }
             else
             {

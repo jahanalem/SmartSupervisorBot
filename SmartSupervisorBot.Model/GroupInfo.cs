@@ -1,12 +1,25 @@
-﻿namespace SmartSupervisorBot.Model
+﻿using System.Text.Json.Serialization;
+
+namespace SmartSupervisorBot.Model
 {
     public class GroupInfo
     {
+        [JsonPropertyName("group_name")]
         public string GroupName { get; set; }
+
+        [JsonPropertyName("language")]
         public string Language { get; set; }
+
+        [JsonPropertyName("is_active")]
         public bool IsActive { get; set; }
+
+        [JsonPropertyName("credit_purchased")]
         public decimal CreditPurchased { get; set; }
+
+        [JsonPropertyName("credit_used")]
         public decimal CreditUsed { get; set; }
+
+        [JsonPropertyName("created_date")]
         public DateTime CreatedDate { get; set; }
 
         public GroupInfo()

@@ -111,9 +111,14 @@ namespace SmartSupervisorBot.Core
             return await _groupAccess.SetToggleGroupActive(groupId, isActive);
         }
 
-        public async Task<List<(string GroupId, GroupInfo GroupInfo)>> ListGroups()
+        public async Task<List<GroupInfoDto>> ListGroups()
         {
-            return await _groupAccess.ListAllGroupsWithLanguagesAsync();
+            var groups = await _groupAccess.ListAllGroupsWithLanguagesAsync();
+            return groups.Select(group => new GroupInfoDto
+            {
+                GroupId = group.GroupId,
+                GroupInfo = group.GroupInfo
+            }).ToList();
         }
 
         public void Dispose()

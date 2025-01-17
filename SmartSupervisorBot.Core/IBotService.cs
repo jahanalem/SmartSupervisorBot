@@ -7,9 +7,9 @@ namespace SmartSupervisorBot.Core
     {
         void StartReceivingMessages();
         Task AddGroup(long groupId, GroupInfo groupInfo);
-        Task<bool> DeleteGroup(string groupName);
-        Task<bool> EditLanguage(string groupName, string language);
-        Task<List<(string GroupId, GroupInfo GroupInfo)>> ListGroups();
+        Task<bool> DeleteGroup(string groupId);
+        Task<bool> EditLanguage(string groupId, string language);
+        Task<List<GroupInfoDto>> ListGroups();
         Task<bool> ToggleGroupActive(string groupId, bool isActive);
         Task AddCreditToGroupAsync(string groupId, decimal creditAmount);
         void Dispose();
