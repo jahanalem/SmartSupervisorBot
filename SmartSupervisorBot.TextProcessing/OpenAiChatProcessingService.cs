@@ -85,6 +85,13 @@ namespace SmartSupervisorBot.TextProcessing
 
             var response = await HttpClient.PostAsync("chat/completions", content);
 
+            if (!response.IsSuccessStatusCode)
+            {
+                // Read and throw the actual API error to understand why it is failing
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"OpenAI API Error: {(int)response.StatusCode} {response.ReasonPhrase} - {errorContent}");
+            }
+
             return JsonSerializer.Deserialize<ChatCompletionResponse>(await response.Content.ReadAsStreamAsync(), OpenAiJsonSerializerContext.Default.ChatCompletionResponse);
         }
 

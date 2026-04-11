@@ -335,8 +335,13 @@ namespace SmartSupervisorBot.Core
                 _logger.LogError("Die Nachricht, auf die geantwortet werden sollte, wurde nicht gefunden. Keine Aktion wird durchgeführt.");
                 return Task.CompletedTask;
             }
+            if (exception.Message.Contains("Request timed out") || exception is TaskCanceledException)
+            {
+                _logger.LogWarning($"Netzwerk-Timeout aufgetreten. Der Bot versucht automatisch, sich neu zu verbinden. Message: {exception.Message}");
+                return Task.CompletedTask;
+            }
 
-            _logger.LogError($"Ein anderer Fehler ist aufgetreten. Bitte überprüfen Sie die Details.{exception.StackTrace}");
+            _logger.LogError($"Ein anderer Fehler ist aufgetreten. Message: {exception.Message} | StackTrace: {exception.StackTrace}");
 
             return Task.CompletedTask;
         }
