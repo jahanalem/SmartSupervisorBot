@@ -37,6 +37,17 @@ namespace SmartSupervisorBot.WebApi
 
         private static void ConfigureServices(WebApplicationBuilder builder)
         {
+            // Configure CORS to allow React frontend connection
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowReactApp", policy =>
+                {
+                    policy.WithOrigins("http://localhost:3000", "http://localhost:5173") // Includes default ports for Create React App and Vite
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
+                });
+            });
+
             // Configure Bot options
             builder.Services.Configure<BotConfigurationOptions>(builder.Configuration.GetSection("BotConfiguration"));
 
@@ -82,8 +93,6 @@ namespace SmartSupervisorBot.WebApi
             });
 
             // Configure route options
-            // https://learn.microsoft.com/en-us/aspnet/core/fundamentals/routing?view=aspnetcore-9.0#route-constraint-reference
-            // https://nemi-chand.github.io/creating-custom-routing-constraint-in-aspnet-core-mvc/?utm_source=chatgpt.com
             builder.Services.Configure<RouteOptions>(options =>
             {
                 options.ConstraintMap["regex"] = typeof(Microsoft.AspNetCore.Routing.Constraints.RegexRouteConstraint);
@@ -97,6 +106,9 @@ namespace SmartSupervisorBot.WebApi
 
         private static void ConfigureMiddleware(WebApplication app)
         {
+            // Enable CORS before other middleware
+            app.UseCors("AllowReactApp");
+
             // Enable Swagger
             app.UseSwagger();
             app.UseSwaggerUI();
