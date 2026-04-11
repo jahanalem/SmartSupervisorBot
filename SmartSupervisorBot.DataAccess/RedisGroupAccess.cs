@@ -154,9 +154,29 @@ namespace SmartSupervisorBot.DataAccess
 
             foreach (var key in keys)
             {
+                var keyType = await _db.KeyTypeAsync(key);
+                if (keyType != RedisType.String)
+                {
+                    continue;
+                }
                 var groupInfoJson = await _db.StringGetAsync(key);
-                var groupInfo = JsonConvert.DeserializeObject<GroupInfo>(groupInfoJson) ?? new GroupInfo();
-                groupInfos.Add((key.ToString(), groupInfo));
+                if (string.IsNullOrEmpty(groupInfoJson))
+                {
+                    continue;
+                }
+                try
+                {
+                    var groupInfo = JsonConvert.DeserializeObject<GroupInfo>(groupInfoJson) ?? new GroupInfo();
+                    if (groupInfo != null && !string.IsNullOrEmpty(groupInfo.GroupName))
+                    {
+                        groupInfos.Add((key.ToString(), groupInfo));
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    Console.WriteLine($"Failed to deserialize group info for key {key}: {ex.Message}");
+                    continue;
+                }
             }
 
             return groupInfos;
