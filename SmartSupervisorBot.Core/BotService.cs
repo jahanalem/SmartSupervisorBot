@@ -163,20 +163,18 @@ namespace SmartSupervisorBot.Core
         {
             var messageText = update.Message.Text;
 
-            if (!(messageText.EndsWith("..") || messageText.EndsWith("。。")))
+            if (string.IsNullOrEmpty(messageText) || (!messageText.EndsWith("..") && !messageText.EndsWith("。。")))
             {
                 return;
             }
+
             var countWords = messageText.CountWords();
-            if (!(countWords >= 1 && countWords <= 80))
+            if (countWords < 1 || countWords > 80)
             {
                 return;
             }
 
-            messageText = messageText.Remove(messageText.Length - 2);
-
-            bool isValidGroup = await IsValidGroup(update.Message);
-            if (!isValidGroup)
+            if (!await IsValidGroup(update.Message))
             {
                 await InformInvalidGroupAsync(botClient, update, cancellationToken);
                 return;
@@ -184,12 +182,23 @@ namespace SmartSupervisorBot.Core
 
             var groupId = update.Message.Chat.Id.ToString();
 
-            var result = await BuildTextProcessingRequestAsync(messageText, groupId);
+            // Remove the last two characters (".." or "。。")
+            var requestText = messageText.Remove(messageText.Length - 2);
+            var result = await BuildTextProcessingRequestAsync(requestText, groupId);
 
             if (!result.groupIsActive)
             {
                 await botClient.SendMessage(update.Message.Chat.Id, result.MessageToUser, parseMode: ParseMode.Html, cancellationToken: cancellationToken);
                 return;
+            }
+
+            if (result.Result.EndsWith(".") || result.Result.EndsWith("。"))
+            {
+                messageText = messageText.Remove(messageText.Length - 1);
+            }
+            else
+            {
+                messageText = messageText.Remove(messageText.Length - 2);
             }
 
             if (result.Result != messageText)
