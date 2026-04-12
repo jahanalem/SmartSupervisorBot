@@ -65,6 +65,9 @@ namespace SmartSupervisorBot.TextProcessing
 
         private ChatCompletionRequest BuildChatCompletionRequest(TextProcessingRequest request)
         {
+            // Get model info from the registry
+            var modelInfo = OpenAiModelRegistry.GetModelInfo(request.Model);
+
             return new ChatCompletionRequest
             {
                 Model = request.Model,
@@ -73,8 +76,14 @@ namespace SmartSupervisorBot.TextProcessing
                     new ChatMessage { Role = "system", Content = request.Prompt },
                     new ChatMessage { Role = "user", Content = request.UserMessage }
                 },
-                MaxTokens = request.MaxTokens,
-                Temperature = request.Temperature
+                // Send MaxTokens ONLY for standard models (like gpt-4o-mini)
+                MaxTokens = modelInfo.IsReasoningModel ? null : request.MaxTokens,
+
+                // Send MaxCompletionTokens ONLY for reasoning models (like gpt-5.4-nano)
+                MaxCompletionTokens = modelInfo.IsReasoningModel ? request.MaxTokens : null,
+
+                // Exclude Temperature for reasoning models
+                Temperature = modelInfo.IsReasoningModel ? null : request.Temperature
             };
         }
 

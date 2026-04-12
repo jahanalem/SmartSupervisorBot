@@ -73,6 +73,7 @@ namespace SmartSupervisorBot.WebApi
 
                 return options.Value.OpenAiModel switch
                 {
+                    "gpt-5.4-nano" => new OpenAiChatProcessingService(options.Value.BotSettings.OpenAiToken, groupAccess),
                     "gpt-4o-mini" => new OpenAiChatProcessingService(options.Value.BotSettings.OpenAiToken, groupAccess),
                     _ => new OpenAiCompletionsService(options.Value.BotSettings.OpenAiToken, groupAccess)
                 };

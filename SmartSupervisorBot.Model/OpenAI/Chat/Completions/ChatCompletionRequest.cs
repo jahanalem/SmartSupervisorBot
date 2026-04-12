@@ -11,9 +11,15 @@ namespace SmartSupervisorBot.Model.OpenAI.Chat.Completions
         public ChatMessage[] Messages { get; set; }
 
         [JsonPropertyName("max_tokens")]
-        public int MaxTokens { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? MaxTokens { get; set; }
+
+        [JsonPropertyName("max_completion_tokens")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? MaxCompletionTokens { get; set; }
 
         [JsonPropertyName("temperature")]
-        public double Temperature { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public double? Temperature { get; set; }
     }
 }
