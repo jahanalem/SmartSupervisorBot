@@ -32,6 +32,81 @@ dotnet run
 
 ---
 # System Sequence Diagram: End-to-End Message Processing
+
+```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'background': '#ffffff',
+    'primaryColor': '#ffe6f0',
+    'primaryBorderColor': '#cc3366',
+    'primaryTextColor': '#222222',
+    'secondaryColor': '#e6f3ff',
+    'secondaryBorderColor': '#3366cc',
+    'secondaryTextColor': '#222222',
+    'tertiaryColor': '#e6ffe6',
+    'tertiaryBorderColor': '#33cc66',
+    'noteTextColor': '#222222',
+    'noteBkgColor': '#fff9c4',
+    'actorBkg': '#ffd9b3',
+    'actorBorder': '#cc7a00',
+    'actorTextColor': '#222222',
+    'actorLineColor': '#888888',
+    'signalColor': '#333333',
+    'signalTextColor': '#333333',
+    'labelBoxBkgColor': '#ffffff',
+    'labelBoxBorderColor': '#000000',
+    'labelTextColor': '#000000'
+  }
+}}%%
+
+sequenceDiagram
+    autonumber
+    actor User as Telegram User
+    participant TG as Telegram Platform
+    participant Core as Core App
+    participant DB as Redis Database
+    participant Admin as Web Dashboard
+    participant AI as OpenAI API
+
+    %% Phase 1: Group Configuration
+    rect rgb(240, 248, 255)
+    note right of Admin: 1. Group Management Phase (Web UI)
+    Admin->>DB: Add Bot to Group (Auto-Registers Inactive)
+    Admin->>DB: Set Target Language, Add Credit, Set Active = True
+    end
+
+    %% Phase 2: Live Processing
+    rect rgb(255, 250, 240)
+    note right of User: 2. Core Processing Phase
+    User->>TG: Sends text message in Group
+    TG->>Core: Forwards Update (Message + GroupId)
+    
+    Core->>DB: Get GroupInfo (GroupId)
+    DB-->>Core: Returns Language, IsActive, Credits
+    
+    alt Group is New or Inactive
+        Core-->>TG: (Ignores message silently)
+    else Group is Active & Has Credit
+        Core->>Core: Build Prompt (Text + Target Language)
+        Core->>AI: SendChatCompletionRequestAsync()
+        
+        AI-->>Core: Returns Corrected Text + Token Usage
+        
+        Core->>Core: Calculate Token Cost using CostCalculator
+        Core->>DB: Add Cost to CreditUsed
+        
+        alt CreditUsed >= CreditPurchased
+            Core->>DB: Set IsActive = False (Deactivate Group)
+            Core->>TG: Send Warning: "Credit Depleted. Contact Admin."
+        else Credit Sufficient
+            Core->>TG: Send Processed Message (Grammar & Translation)
+        end
+        TG-->>User: Displays bot's response in Group
+    end
+    end
+```
+
 <img width="7034" height="4583" alt="SmartSupervisorBot_sequenceDiagram_mermaid" src="https://github.com/user-attachments/assets/ca24536d-8dda-4f68-a331-2930521bf52c" />
 
 
