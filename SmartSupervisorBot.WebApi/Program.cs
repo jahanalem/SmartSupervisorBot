@@ -31,7 +31,7 @@ namespace SmartSupervisorBot.WebApi
             // Start the bot service
             StartBotService(app);
 
-            // Run the application
+            // Run the application 
             app.Run();
         }
 
@@ -85,7 +85,7 @@ namespace SmartSupervisorBot.WebApi
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(options =>
             {
-                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
                 {
                     Title = "Smart Supervisor Bot API",
                     Version = "v1"
