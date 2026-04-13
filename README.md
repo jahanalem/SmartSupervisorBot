@@ -29,6 +29,10 @@ dotnet restore
 3. Start the bot:
 dotnet run
 
+***
+
+<img width="2624" height="1472" alt="SmartSupervisorBot_Web-UI" src="https://github.com/user-attachments/assets/540d0410-5760-48e9-82d2-fa4b4e4cdafb" />
+
 
 ---
 # System Sequence Diagram: End-to-End Message Processing
