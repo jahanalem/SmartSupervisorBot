@@ -29,7 +29,7 @@ namespace SmartSupervisorBot.TextProcessing
             var body = new CompletionRequest
             {
                 Model = request.Model,
-                Prompt = request.PromptWithMessage,
+                Prompt = request.Prompt,
                 MaxTokens = request.MaxTokens,
                 Temperature = request.Temperature
             };
@@ -53,7 +53,7 @@ namespace SmartSupervisorBot.TextProcessing
 
         private async Task<GroupInfo> ValidateAndUpdateCreditsAsync(TextProcessingRequest request)
         {
-            var tokenCostData = TokenUtility.CalculateTokenAndCost(request.PromptWithMessage, request.MaxTokens, request.Model);
+            var tokenCostData = TokenUtility.CalculateTokenAndCost(request.Prompt, request.MaxTokens, request.Model);
             var groupInfo = await _groupAccess.GetGroupInfoAsync(request.GroupId);
 
             var newCreditUsed = groupInfo.CreditUsed + tokenCostData.EstimatedCost;

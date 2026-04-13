@@ -299,12 +299,12 @@ namespace SmartSupervisorBot.Core
                 var settings = _botConfigurationOptions.UnifiedTextSettings;
                 var languageGroup = await _groupAccess.GetGroupLanguageAsync(groupId);
                 var languageToUse = languageGroup ?? _botConfigurationOptions.TranslateTheTextTo;
+                var message = messageText?.Trim();
 
-                string prompt = settings.Prompt.Replace("{language}", languageToUse);
-                string promptWithMessage = $"{prompt} '{messageText}'";
+                string prompt = settings.Prompt.Replace("{language}", languageToUse).Replace("{input}", message ?? string.Empty);
                 var openAiModel = _botConfigurationOptions.OpenAiModel;
-                var message = messageText.Trim();
-                var request = new TextProcessingRequest(prompt, promptWithMessage, openAiModel, settings.MaxTokens, settings.Temperature, groupId, message);
+
+                var request = new TextProcessingRequest(prompt, openAiModel, settings.MaxTokens, settings.Temperature, groupId, message);
 
                 return await _textProcessingService.ProcessTextAsync(request);
             }
