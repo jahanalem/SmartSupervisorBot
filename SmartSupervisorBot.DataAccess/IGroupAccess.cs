@@ -17,5 +17,6 @@ namespace SmartSupervisorBot.DataAccess
         Task<GroupInfo> GetGroupInfoAsync(string groupId);
         Task UpdateGroupInfoAsync(string groupId, GroupInfo groupInfo);
         Task AddCreditToGroupAsync(string groupId, decimal creditAmount);
+        Task<bool> MigrateGroupIdAsync(string oldGroupId, string newGroupId);
     }
 }

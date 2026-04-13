@@ -146,6 +146,15 @@ namespace SmartSupervisorBot.Core
                         case MessageType.NewChatTitle:
                             await UpdateGroupNameAsync(update);
                             break;
+                        case MessageType.MigrateToChatId:
+                            if (update.Message.MigrateToChatId.HasValue)
+                            {
+                                var oldId = update.Message.Chat.Id.ToString();
+                                var newId = update.Message.MigrateToChatId.Value.ToString();
+                                await _groupAccess.MigrateGroupIdAsync(oldId, newId);
+                                _logger.LogInformation($"Group ID migrated from {oldId} to {newId}");
+                            }
+                            break;
                     }
                 }
                 else if (update.Type == UpdateType.MyChatMember && update.MyChatMember.NewChatMember.Status == ChatMemberStatus.Member)

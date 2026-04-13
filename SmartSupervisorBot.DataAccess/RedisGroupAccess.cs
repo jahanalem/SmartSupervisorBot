@@ -41,13 +41,14 @@ namespace SmartSupervisorBot.DataAccess
             return language;
         }
 
-        public async Task<bool> RenameGroupAsync(string oldGroupName, string newGroupName)
+        public async Task<bool> MigrateGroupIdAsync(string oldGroupId, string newGroupId)
         {
-            var language = await _db.StringGetAsync(oldGroupName);
-            if (!language.IsNullOrEmpty)
+            var groupInfoString = await _db.StringGetAsync(oldGroupId);
+            if (!groupInfoString.IsNullOrEmpty)
             {
-                await _db.KeyDeleteAsync(oldGroupName);
-                return await _db.StringSetAsync(newGroupName, language);
+                // Delete the old "-5" ID and save the exact same data under the new "-100" ID
+                await _db.KeyDeleteAsync(oldGroupId);
+                return await _db.StringSetAsync(newGroupId, groupInfoString);
             }
             return false;
         }

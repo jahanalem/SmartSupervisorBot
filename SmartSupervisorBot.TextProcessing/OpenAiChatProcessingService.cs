@@ -47,7 +47,7 @@ namespace SmartSupervisorBot.TextProcessing
 
             var responseText = responseContent?.Choices?.FirstOrDefault()?.Message?.Content ?? string.Empty;
 
-            var messageToUser = await UpdateGroupCreditsAsync(groupInfo, responseContent.Usage, request.Model);
+            var messageToUser = await UpdateGroupCreditsAsync(request.GroupId, groupInfo, responseContent.Usage, request.Model);
 
             return new TextProcessingResult(responseText.Trim(), groupInfo.IsActive, messageToUser);
         }
@@ -104,7 +104,7 @@ namespace SmartSupervisorBot.TextProcessing
             return JsonSerializer.Deserialize<ChatCompletionResponse>(await response.Content.ReadAsStreamAsync(), OpenAiJsonSerializerContext.Default.ChatCompletionResponse);
         }
 
-        private async Task<string> UpdateGroupCreditsAsync(GroupInfo groupInfo, TokenUsage usage, string model)
+        private async Task<string> UpdateGroupCreditsAsync(string groupId, GroupInfo groupInfo, TokenUsage usage, string model)
         {
             var promptTokens = usage?.PromptTokens ?? 0;
             var completionTokens = usage?.CompletionTokens ?? 0;
@@ -114,12 +114,12 @@ namespace SmartSupervisorBot.TextProcessing
             if (groupInfo.CreditUsed >= groupInfo.CreditPurchased)
             {
                 groupInfo.IsActive = false;
-                await _groupAccess.SetToggleGroupActive(groupInfo.GroupName, false);
+                await _groupAccess.SetToggleGroupActive(groupId, false);
 
                 return "<i> Your group's credit has been depleted. Please recharge your account to continue using the bot. For assistance, contact the bot administrator: @Roohi_C </i>";
             }
 
-            await _groupAccess.UpdateGroupInfoAsync(groupInfo.GroupName, groupInfo);
+            await _groupAccess.UpdateGroupInfoAsync(groupId, groupInfo);
 
             return string.Empty;
         }
